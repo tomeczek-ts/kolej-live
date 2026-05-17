@@ -173,6 +173,7 @@ function hop_page_popular_services(PDO $pdo): array
              FROM hop_train_searches s
              JOIN hop_train_runs tr ON tr.service_key = s.service_key
              WHERE s.searched_at >= NOW() - INTERVAL 7 DAY
+               AND (tr.label REGEXP '^(EIC|EIP|IC|TLK)([[:space:]]|$)' OR tr.category IN ('EIC', 'EIP', 'IC', 'TLK'))
              GROUP BY tr.service_key
              HAVING searches_count >= 5
              ORDER BY searches_count DESC, MAX(s.searched_at) DESC, label ASC
@@ -207,6 +208,7 @@ function hop_page_popular_services(PDO $pdo): array
          FROM hop_train_runs tr
          JOIN hop_station_observations obs ON obs.train_run_id = tr.id
          WHERE obs.observation_date = CURDATE() - INTERVAL 1 DAY
+           AND (tr.label REGEXP '^(EIC|EIP|IC|TLK)([[:space:]]|$)' OR tr.category IN ('EIC', 'EIP', 'IC', 'TLK'))
            $excludeSql
          GROUP BY tr.service_key
          ORDER BY RAND()
@@ -260,6 +262,7 @@ function hop_page_top_delay_services(PDO $pdo, string $period): array
            ) obs
          ) d
          JOIN hop_train_runs tr ON tr.id = d.train_run_id
+         WHERE (tr.label REGEXP '^(EIC|EIP|IC|TLK)([[:space:]]|$)' OR tr.category IN ('EIC', 'EIP', 'IC', 'TLK'))
          GROUP BY tr.service_key
          HAVING max_delay IS NOT NULL
          ORDER BY max_delay DESC, label ASC
@@ -601,9 +604,10 @@ try {
     .error { color: #94191f; background: #fff1f2; border: 1px solid #f1b7bb; }
     .popular-panel, .delay-panel { padding: 16px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
     .popular-panel { margin-top: 18px; }
-    .delay-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 18px; }
+    .delay-panels { display: grid; grid-template-columns: 1fr; gap: 20px; margin-top: 18px; }
     .popular-panel h2, .delay-panel h2 { margin: 0 0 12px; font-size: 18px; line-height: 1.2; }
-    .service-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+    .service-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+    .delay-panel .service-grid { grid-template-columns: 1fr; }
     .service-card { min-height: 74px; display: grid; align-content: space-between; gap: 8px; padding: 12px; color: var(--ink); text-decoration: none; border: 1px solid var(--line); border-radius: 8px; background: var(--soft); font-weight: 760; }
     .service-card:hover { border-color: rgba(199, 34, 42, .45); box-shadow: 0 8px 22px rgba(22, 30, 42, .08); }
     .service-card-name { line-height: 1.25; }
