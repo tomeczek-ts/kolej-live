@@ -28,7 +28,7 @@ $stations = sitemap_items('stations.json');
 foreach ($stations as $station) {
     $id = (int) ($station['id'] ?? 0);
     $name = sitemap_clean($station['name'] ?? null);
-    if ($id <= 0 || $name === null) {
+    if ($id <= 0 || $name === null || !sitemap_is_public_station_name($name)) {
         continue;
     }
 
@@ -122,6 +122,23 @@ function sitemap_slug(string $value): string
     $slug = trim(preg_replace('/-+/', '-', $slug) ?? $slug, '-');
 
     return $slug !== '' ? $slug : 'kolej';
+}
+
+function sitemap_is_public_station_name(string $name): bool
+{
+    $name = trim($name);
+    if ($name === '' || strpos($name, ' -') !== false) {
+        return false;
+    }
+
+    $lettersOnly = preg_replace('/[^\p{L}]+/u', '', $name) ?? '';
+    if ($lettersOnly === '') {
+        return false;
+    }
+
+    $upper = function_exists('mb_strtoupper') ? mb_strtoupper($name, 'UTF-8') : strtoupper($name);
+
+    return $name !== $upper;
 }
 
 function sitemap_hop_services(int $limit): array

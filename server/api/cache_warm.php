@@ -89,12 +89,36 @@ function cache_warm_stations(array $rows): array
 {
     $items = [];
     foreach ($rows as $row) {
-        if (isset($row['id'], $row['name'])) {
-            $items[] = ['id' => (int) $row['id'], 'name' => trim((string) $row['name'])];
+        if (!isset($row['id'], $row['name'])) {
+            continue;
         }
+
+        $name = trim((string) $row['name']);
+        if (!cache_warm_is_public_station_name($name)) {
+            continue;
+        }
+
+        $items[] = ['id' => (int) $row['id'], 'name' => $name];
     }
 
     return $items;
+}
+
+function cache_warm_is_public_station_name(string $name): bool
+{
+    $name = trim($name);
+    if ($name === '' || strpos($name, ' -') !== false) {
+        return false;
+    }
+
+    $lettersOnly = preg_replace('/[^\p{L}]+/u', '', $name) ?? '';
+    if ($lettersOnly === '') {
+        return false;
+    }
+
+    $upper = function_exists('mb_strtoupper') ? mb_strtoupper($name, 'UTF-8') : strtoupper($name);
+
+    return $name !== $upper;
 }
 
 function cache_warm_carriers(array $rows): array
