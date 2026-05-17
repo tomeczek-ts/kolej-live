@@ -2,6 +2,7 @@ Options -Indexes
 RewriteEngine On
 
 RewriteRule ^api/ - [L]
+RewriteRule ^sitemap\.xml$ /sitemap.php [L]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

@@ -1,0 +1,4 @@
+Options -Indexes
+RewriteEngine On
+
+RewriteRule ^sitemap\.xml$ /sitemap.php [L]

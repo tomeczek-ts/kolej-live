@@ -2,3 +2,5 @@ User-agent: *
 Allow: /
 
 Sitemap: https://kolej.live/sitemap.php
+Sitemap: https://kolej.live/sitemap.xml
+Sitemap: https://hop.kolej.live/sitemap.xml
