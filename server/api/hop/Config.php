@@ -2,10 +2,27 @@
 
 declare(strict_types=1);
 
-$hopLocalConfig = is_file(__DIR__ . '/Config.local.php') ? require __DIR__ . '/Config.local.php' : [];
-if (!is_array($hopLocalConfig)) {
-    $hopLocalConfig = [];
+function hop_load_config_array(string $path): array
+{
+    if (!is_file($path)) {
+        return [];
+    }
+
+    $level = ob_get_level();
+    ob_start();
+
+    try {
+        $config = require $path;
+    } finally {
+        while (ob_get_level() > $level) {
+            ob_end_clean();
+        }
+    }
+
+    return is_array($config) ? $config : [];
 }
+
+$hopLocalConfig = hop_load_config_array(__DIR__ . '/Config.local.php');
 
 define('HOP_DB_HOST', (string) ($hopLocalConfig['HOP_DB_HOST'] ?? getenv('HOP_DB_HOST') ?: 'localhost'));
 define('HOP_DB_NAME', (string) ($hopLocalConfig['HOP_DB_NAME'] ?? getenv('HOP_DB_NAME') ?: 'WSTAW_NAZWE_BAZY'));

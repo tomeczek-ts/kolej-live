@@ -202,7 +202,10 @@ export default function App() {
       try {
         const result = await api.suggest(value, date);
         if (active) {
-          setSuggestions(result.suggestions);
+          const nextSuggestions = mode === "train"
+            ? result.suggestions.filter((item) => item.type !== "train")
+            : result.suggestions;
+          setSuggestions(nextSuggestions);
         }
       } catch {
         if (active) {
@@ -219,7 +222,7 @@ export default function App() {
       active = false;
       window.clearTimeout(timer);
     };
-  }, [date, query]);
+  }, [date, mode, query]);
 
   useEffect(() => {
     if (view === "disruptions" && !station) {
@@ -492,10 +495,6 @@ export default function App() {
           <a className="brand" href="/" aria-label="kolej.live">
             <img className="brand-logo" src="/kolej-live-logo.svg" alt="kolej.live" width="196" height="52" />
           </a>
-          <div className="site-intro">
-            <h1>{t("hero.title")}</h1>
-            <p>{t("hero.description")}</p>
-          </div>
         </div>
         <nav className="main-nav" aria-label={t("nav.aria")}>
           {navItems.map((item) => (
@@ -518,6 +517,11 @@ export default function App() {
           <StatsStrip stats={stats} loading={loading === "stats"} t={t} dateTimeLocale={dateTimeLocale} onTrainList={navigateToTrainList} />
         </div>
       </header>
+
+      <section className="site-intro" aria-labelledby="page-title">
+        <h1 id="page-title">{t("hero.title")}</h1>
+        <p>{t("hero.description")}</p>
+      </section>
 
       <section className="search-toolbar">
         <span className="sr-only">{t("nav.status")}</span>

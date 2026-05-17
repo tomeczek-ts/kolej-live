@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 return [
     'PDP_API_BASE_URL' => 'https://pdp-api.plk-sa.pl',
     'PDP_API_KEY' => 'WSTAW_KLUCZ_PDP_API',

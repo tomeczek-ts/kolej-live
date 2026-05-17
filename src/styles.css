@@ -57,7 +57,7 @@ a {
 .topbar {
   min-height: 78px;
   display: grid;
-  grid-template-columns: minmax(300px, 0.9fr) minmax(340px, 1fr) auto;
+  grid-template-columns: auto minmax(340px, 1fr) auto;
   align-items: center;
   gap: 20px;
   border-bottom: 1px solid var(--line);
@@ -65,9 +65,7 @@ a {
 
 .brand-block {
   min-width: 0;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 14px;
+  display: flex;
   align-items: center;
 }
 
@@ -87,6 +85,8 @@ a {
 
 .site-intro {
   min-width: 0;
+  padding: 18px 0 12px;
+  border-bottom: 1px solid var(--line);
 }
 
 .site-intro h1 {
@@ -1122,8 +1122,7 @@ a {
   }
 
   .brand-block {
-    grid-template-columns: 1fr;
-    gap: 8px;
+    justify-content: flex-start;
   }
 
   .main-nav {

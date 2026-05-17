@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 return [
     'HOP_DB_HOST' => 'localhost',
     'HOP_DB_NAME' => 'WSTAW_NAZWE_BAZY',

@@ -2,10 +2,27 @@
 
 declare(strict_types=1);
 
-$localConfig = is_file(__DIR__ . '/config.local.php') ? require __DIR__ . '/config.local.php' : [];
-if (!is_array($localConfig)) {
-    $localConfig = [];
+function load_config_array(string $path): array
+{
+    if (!is_file($path)) {
+        return [];
+    }
+
+    $level = ob_get_level();
+    ob_start();
+
+    try {
+        $config = require $path;
+    } finally {
+        while (ob_get_level() > $level) {
+            ob_end_clean();
+        }
+    }
+
+    return is_array($config) ? $config : [];
 }
+
+$localConfig = load_config_array(__DIR__ . '/config.local.php');
 
 define('PDP_API_BASE_URL', (string) ($localConfig['PDP_API_BASE_URL'] ?? getenv('PDP_API_BASE_URL') ?: 'https://pdp-api.plk-sa.pl'));
 define('PDP_API_KEY', (string) ($localConfig['PDP_API_KEY'] ?? getenv('PDP_API_KEY') ?: 'WSTAW_KLUCZ_PDP_API'));

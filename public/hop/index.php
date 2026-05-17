@@ -555,8 +555,9 @@ try {
     body { margin: 0; color: var(--ink); background: #fff; }
     .shell { width: min(1280px, calc(100% - 28px)); margin: 0 auto; padding: 24px 0 40px; }
     .top { display: flex; justify-content: space-between; gap: 16px; align-items: center; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
-    .brand { display: flex; align-items: center; gap: 12px; font-size: 22px; font-weight: 820; }
-    .brand-logo { width: 38px; height: 38px; display: block; border-radius: 8px; }
+    .brand { display: flex; align-items: center; gap: 14px; font-size: 22px; font-weight: 820; }
+    .brand-logo { width: 196px; height: auto; display: block; }
+    .brand span { max-width: 360px; line-height: 1.15; }
     .parent-service { display: grid; justify-items: end; gap: 2px; color: var(--muted); font-size: 12px; font-weight: 720; }
     .parent-service a { color: var(--ink); text-decoration: none; font-size: 16px; font-weight: 820; }
     .parent-service a:hover { color: var(--red); }
@@ -610,6 +611,7 @@ try {
     @media (max-width: 820px) {
       .top, .controls { grid-template-columns: 1fr; align-items: stretch; }
       .top { display: grid; }
+      .brand-logo { width: 154px; }
       .metrics { grid-template-columns: 1fr 1fr; }
       .delay-panels { grid-template-columns: 1fr; }
     }
