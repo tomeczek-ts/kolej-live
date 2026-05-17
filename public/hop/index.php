@@ -607,7 +607,6 @@ try {
     .delay-panels { display: grid; grid-template-columns: 1fr; gap: 20px; margin-top: 18px; }
     .popular-panel h2, .delay-panel h2 { margin: 0 0 12px; font-size: 18px; line-height: 1.2; }
     .service-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
-    .delay-panel .service-grid { grid-template-columns: 1fr; }
     .service-card { min-height: 74px; display: grid; align-content: space-between; gap: 8px; padding: 12px; color: var(--ink); text-decoration: none; border: 1px solid var(--line); border-radius: 8px; background: var(--soft); font-weight: 760; }
     .service-card:hover { border-color: rgba(199, 34, 42, .45); box-shadow: 0 8px 22px rgba(22, 30, 42, .08); }
     .service-card-name { line-height: 1.25; }
