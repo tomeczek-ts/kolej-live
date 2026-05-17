@@ -1,0 +1,12 @@
+node_modules/
+dist/
+server/api/cache/
+server/api/data/
+server/api/config.local.php
+server/api/hop/Config.local.php
+.chrome-qa-profile/
+.chrome-qa-profile-wide/
+*.log
+*.zip
+*.tsbuildinfo
+.DS_Store
