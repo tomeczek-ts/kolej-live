@@ -298,7 +298,7 @@ a {
   position: relative;
   height: 62px;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
   gap: 12px;
   align-items: center;
   padding: 0 8px 0 16px;
@@ -423,6 +423,21 @@ a {
 }
 
 .clear-search-button svg {
+  color: currentColor;
+}
+
+.location-button {
+  color: var(--red);
+  background: #fff4f4;
+  border-color: rgba(215, 24, 43, 0.22);
+}
+
+.location-button:hover:not(:disabled) {
+  color: #ffffff;
+  background: var(--red);
+}
+
+.location-button svg {
   color: currentColor;
 }
 

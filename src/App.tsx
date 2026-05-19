@@ -9,6 +9,7 @@ import {
   Clock3,
   ExternalLink,
   Languages,
+  LocateFixed,
   Loader2,
   MapPin,
   Radio,
@@ -107,6 +108,7 @@ export default function App() {
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [suggestionLoading, setSuggestionLoading] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(false);
   const [boardKind, setBoardKind] = useState<BoardKind>("departure");
   const [pendingDetail, setPendingDetail] = useState<PendingDetail | null>(null);
   const [loading, setLoading] = useState<"search" | "station" | "train" | "trainList" | "stats" | "disruptions" | null>(null);
@@ -405,6 +407,45 @@ export default function App() {
     }
   }
 
+  async function findNearbyStations() {
+    if (!window.navigator.geolocation) {
+      setError(t("errors.geolocation_unavailable"));
+      return;
+    }
+
+    const title = t("search.location");
+    setError(null);
+    setSearch(null);
+    setStation(null);
+    setTrain(null);
+    setTrainList(null);
+    setMode("station");
+    setView("status");
+    setQuery(title);
+    setSuggestionsOpen(false);
+    setPendingDetail({ title, overlineKey: "detail.station", loadingKey: "loading.location" });
+    setLocationLoading(true);
+
+    try {
+      const position = await readCurrentPosition();
+      const result = await api.nearbyStations(position.coords.latitude, position.coords.longitude);
+      setSearch({
+        query: title,
+        date,
+        stations: result.stations,
+        trains: [],
+        warnings: result.warnings ?? [],
+        generatedAt: result.generatedAt,
+        demo: result.demo,
+      });
+    } catch (cause) {
+      setError(geolocationErrorMessage(cause, t));
+    } finally {
+      setPendingDetail(null);
+      setLocationLoading(false);
+    }
+  }
+
   async function loadStation(item: StationSuggestion, showLoading = true, options: { historyMode?: "push" | "replace"; updateUrl?: boolean; track?: boolean } = {}) {
     setError(null);
     setPendingDetail({ title: item.name, overlineKey: "detail.station", loadingKey: "loading.board" });
@@ -603,6 +644,17 @@ export default function App() {
                 <X size={17} />
               </button>
             )}
+            <button
+              className="icon-button location-button"
+              type="button"
+              aria-label={t("search.location")}
+              title={t("search.location")}
+              disabled={locationLoading}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={findNearbyStations}
+            >
+              {locationLoading ? <Loader2 className="spin" size={18} /> : <LocateFixed size={18} />}
+            </button>
             <button className="icon-button primary" type="submit" aria-label={t("search.submit")} disabled={loading === "search"}>
               {loading === "search" ? <Loader2 className="spin" size={18} /> : <ChevronRight size={19} />}
             </button>
@@ -665,7 +717,7 @@ export default function App() {
         <aside className="results-panel">
           <SearchResults
             search={search}
-            loading={loading === "search"}
+            loading={loading === "search" || locationLoading}
             t={t}
             onStation={loadStation}
             onTrain={loadTrain}
@@ -882,7 +934,11 @@ function SearchResults({
                 <MapPin size={18} />
                 <span>
                   <strong>{station.name}</strong>
-                  <small>{link.slug}</small>
+                  <small>
+                    {station.distanceKm !== undefined
+                      ? `${t("results.distanceKm", { distance: formatDistanceKm(station.distanceKm, dateTimeLocale) })} · ${link.slug}`
+                      : link.slug}
+                  </small>
                 </span>
                 <ChevronRight size={17} />
               </a>
@@ -1511,6 +1567,27 @@ function exactStationMatch(stations: StationSuggestion[], query: string) {
   return stations.find((station) => normalizeStationName(station.name) === normalizedQuery) ?? null;
 }
 
+function readCurrentPosition(): Promise<GeolocationPosition> {
+  return new Promise((resolve, reject) => {
+    window.navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: false,
+      timeout: 10000,
+      maximumAge: 5 * 60 * 1000,
+    });
+  });
+}
+
+function geolocationErrorMessage(cause: unknown, t: TranslateFn) {
+  const code = typeof cause === "object" && cause !== null && "code" in cause ? Number(cause.code) : 0;
+
+  if (code === 1) return t("errors.geolocation_denied");
+  if (code === 2) return t("errors.geolocation_unavailable");
+  if (code === 3) return t("errors.geolocation_timeout");
+  if (cause instanceof AppApiError) return errorMessage(cause, t);
+
+  return t("errors.geolocation_failed");
+}
+
 function normalizeStationName(value: string) {
   return value
     .replace(/[łŁ]/g, (match) => (match === "Ł" ? "L" : "l"))
@@ -1613,6 +1690,13 @@ function formatDelay(delay: number | null, t: TranslateFn) {
   if (delay <= 0) return t("delay.onTime");
 
   return t("delay.minutes", { minutes: delay });
+}
+
+function formatDistanceKm(distance: number, locale: string) {
+  return new Intl.NumberFormat(locale, {
+    maximumFractionDigits: distance < 10 ? 1 : 0,
+    minimumFractionDigits: 0,
+  }).format(distance);
 }
 
 function statusText(status: StatusInfo, t: TranslateFn) {

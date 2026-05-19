@@ -5,6 +5,7 @@ import { stationSeoLink, trainSeoLink } from "./seoLinks";
 import type { SeoLink, SeoLinksResponse, TrainListKind } from "./seoLinks";
 import type {
   DisruptionsResponse,
+  NearbyStationsResponse,
   SearchMode,
   SearchResponse,
   StationResponse,
@@ -103,6 +104,22 @@ export const api = {
             operatingDate: demoTrain.date,
           },
         ],
+        demo: true,
+      },
+    );
+  },
+  nearbyStations(latitude: number, longitude: number) {
+    return request<NearbyStationsResponse>(
+      { action: "nearby_stations", lat: latitude, lon: longitude, limit: 8 },
+      {
+        latitude,
+        longitude,
+        stations: [
+          { ...demoStation.station, distanceKm: 1.2 },
+          { id: 5100071, name: "Warszawa Zachodnia", distanceKm: 3.8 },
+          { id: 5100067, name: "Warszawa Wschodnia", distanceKm: 5.4 },
+        ],
+        warnings: [],
         demo: true,
       },
     );

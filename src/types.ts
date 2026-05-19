@@ -14,6 +14,7 @@ export interface ApiErrorPayload {
 export interface StationSuggestion {
   id: number;
   name: string;
+  distanceKm?: number;
 }
 
 export interface SearchSuggestion {
@@ -105,6 +106,15 @@ export interface SearchResponse {
   date: string;
   stations: StationSuggestion[];
   trains: TrainSummary[];
+  warnings: string[];
+  generatedAt?: string;
+  demo?: boolean;
+}
+
+export interface NearbyStationsResponse {
+  latitude: number;
+  longitude: number;
+  stations: StationSuggestion[];
   warnings: string[];
   generatedAt?: string;
   demo?: boolean;

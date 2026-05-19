@@ -5,6 +5,7 @@ declare(strict_types=1);
 require __DIR__ . '/config.php';
 require __DIR__ . '/PdpClient.php';
 require __DIR__ . '/lib/DataFiles.php';
+require __DIR__ . '/lib/StationCoordinates.php';
 require __DIR__ . '/pdp/stations.php';
 require __DIR__ . '/pdp/schedules.php';
 require __DIR__ . '/pdp/disruptions.php';
@@ -40,7 +41,9 @@ $summary = [
 
 try {
     $stations = cache_warm_stations(pdp_stations_all($client)['stations'] ?? []);
-    cache_warm_write('stations', $stations, array_map(static fn(array $item): string => $item['id'] . "\t" . $item['name'], $stations), $summary);
+    cache_warm_write('stations', $stations, array_map(static function (array $item): string {
+        return $item['id'] . "\t" . $item['name'] . "\t" . ($item['latitude'] ?? '') . "\t" . ($item['longitude'] ?? '');
+    }, $stations), $summary);
 
     $carriers = cache_warm_carriers(pdp_carriers($client)['carriers'] ?? []);
     cache_warm_write('carriers', $carriers, array_map(static fn(array $item): string => $item['code'] . "\t" . $item['name'], $carriers), $summary);
@@ -98,7 +101,14 @@ function cache_warm_stations(array $rows): array
             continue;
         }
 
-        $items[] = ['id' => (int) $row['id'], 'name' => $name];
+        $item = ['id' => (int) $row['id'], 'name' => $name];
+        $coordinates = station_coordinates_from_row($row);
+        if ($coordinates !== null) {
+            $item['latitude'] = $coordinates['latitude'];
+            $item['longitude'] = $coordinates['longitude'];
+        }
+
+        $items[] = $item;
     }
 
     return $items;
@@ -107,7 +117,7 @@ function cache_warm_stations(array $rows): array
 function cache_warm_is_public_station_name(string $name): bool
 {
     $name = trim($name);
-    if ($name === '' || strpos($name, ' -') !== false) {
+    if ($name === '' || strpos($name, ' -') !== false || preg_match('/^(stacja|station)\s+\d+$/iu', $name) === 1) {
         return false;
     }
 

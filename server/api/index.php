@@ -6,6 +6,7 @@ require __DIR__ . '/config.php';
 require __DIR__ . '/PdpClient.php';
 require __DIR__ . '/lib/DataFiles.php';
 require __DIR__ . '/lib/Translations.php';
+require __DIR__ . '/lib/StationCoordinates.php';
 require __DIR__ . '/pdp/stations.php';
 require __DIR__ . '/pdp/schedules.php';
 require __DIR__ . '/pdp/operations.php';
@@ -51,6 +52,9 @@ try {
             break;
         case 'stations':
             respond(200, stationsEndpoint($client));
+            break;
+        case 'nearby_stations':
+            respond(200, nearbyStationsEndpoint($client));
             break;
         case 'suggest':
             respond(200, suggestEndpoint($client));
@@ -152,6 +156,44 @@ function stationsEndpoint(PdpClient $client): array
     return [
         'query' => $query,
         'stations' => stationSuggestions($client, $query, queryInt('limit', 20, 1, 50)),
+        'generatedAt' => gmdate(DATE_ATOM),
+    ];
+}
+
+function nearbyStationsEndpoint(PdpClient $client): array
+{
+    $latitude = queryFloat('lat');
+    $longitude = queryFloat('lon');
+    $limit = queryInt('limit', 8, 1, 20);
+
+    if ($latitude === null || $longitude === null || !station_coordinates_are_valid($latitude, $longitude)) {
+        respond(422, [
+            'error' => [
+                'code' => 'location_required',
+                'message' => 'Brakuje poprawnych wspolrzednych lokalizacji.',
+            ],
+        ]);
+    }
+
+    $stations = stationsWithCoordinates($client);
+    $items = [];
+
+    foreach ($stations as $station) {
+        $distanceKm = haversineDistanceKm($latitude, $longitude, (float) $station['latitude'], (float) $station['longitude']);
+        $items[] = [
+            'id' => (int) $station['id'],
+            'name' => (string) $station['name'],
+            'distanceKm' => round($distanceKm, 1),
+        ];
+    }
+
+    usort($items, static fn(array $a, array $b): int => ($a['distanceKm'] <=> $b['distanceKm']) ?: strcmp($a['name'], $b['name']));
+
+    return [
+        'latitude' => $latitude,
+        'longitude' => $longitude,
+        'stations' => array_slice($items, 0, $limit),
+        'warnings' => $items === [] ? ['Brak wspolrzednych stacji w lokalnym cache.'] : [],
         'generatedAt' => gmdate(DATE_ATOM),
     ];
 }
@@ -432,6 +474,61 @@ function stationSuggestions(PdpClient $client, string $query, int $limit): array
     }
 
     return $items;
+}
+
+function stationsWithCoordinates(PdpClient $client): array
+{
+    $payload = data_read_json('stations.json');
+    $rows = is_array($payload['items'] ?? null) ? $payload['items'] : [];
+
+    if ($rows === []) {
+        $rows = pdp_stations_all($client)['stations'] ?? [];
+    }
+
+    $fallbacks = [];
+    foreach (station_coordinates_fallbacks() as $fallback) {
+        $fallbacks[station_coordinates_normalize_name((string) $fallback['name'])] = [
+            'latitude' => (float) $fallback['latitude'],
+            'longitude' => (float) $fallback['longitude'],
+        ];
+    }
+
+    $items = [];
+    foreach ($rows as $row) {
+        if (!is_array($row) || !isset($row['id'], $row['name'])) {
+            continue;
+        }
+
+        $name = trim((string) $row['name']);
+        if (!isPublicStationName($name)) {
+            continue;
+        }
+
+        $coordinates = station_coordinates_from_row($row) ?? $fallbacks[station_coordinates_normalize_name($name)] ?? null;
+        if ($coordinates === null) {
+            continue;
+        }
+
+        $items[] = [
+            'id' => (int) $row['id'],
+            'name' => $name,
+            'latitude' => (float) $coordinates['latitude'],
+            'longitude' => (float) $coordinates['longitude'],
+        ];
+    }
+
+    return $items;
+}
+
+function haversineDistanceKm(float $latA, float $lonA, float $latB, float $lonB): float
+{
+    $earthRadiusKm = 6371.0;
+    $latDelta = deg2rad($latB - $latA);
+    $lonDelta = deg2rad($lonB - $lonA);
+    $a = sin($latDelta / 2) ** 2
+        + cos(deg2rad($latA)) * cos(deg2rad($latB)) * sin($lonDelta / 2) ** 2;
+
+    return $earthRadiusKm * 2 * atan2(sqrt($a), sqrt(1 - $a));
 }
 
 function trainSuggestions(PdpClient $client, string $query, string $date, int $limit): array
@@ -1419,6 +1516,18 @@ function queryInt(string $name, int $default, int $min, int $max): int
     $int = (int) $value;
 
     return min(max($int, $min), $max);
+}
+
+function queryFloat(string $name): ?float
+{
+    $value = $_GET[$name] ?? null;
+    if (is_array($value) || $value === null || $value === '') {
+        return null;
+    }
+
+    $normalized = str_replace(',', '.', trim((string) $value));
+
+    return is_numeric($normalized) ? (float) $normalized : null;
 }
 
 function todayWarsaw(): string
