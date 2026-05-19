@@ -61,6 +61,8 @@ return [
     'board.time' => 'Czas',
     'board.train' => 'Pociąg',
     'board.direction' => 'Relacja',
+    'board.from' => 'z:',
+    'board.to' => 'do:',
     'board.platform' => 'Peron',
     'board.status' => 'Status',
     'board.empty' => 'Brak połączeń dla wybranego dnia.',

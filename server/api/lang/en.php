@@ -61,6 +61,8 @@ return [
     'board.time' => 'Time',
     'board.train' => 'Train',
     'board.direction' => 'Route',
+    'board.from' => 'from:',
+    'board.to' => 'to:',
     'board.platform' => 'Platform',
     'board.status' => 'Status',
     'board.empty' => 'No connections for the selected day.',

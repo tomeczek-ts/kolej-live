@@ -372,7 +372,11 @@ export default function App() {
         writeBrowserUrl(searchHref(value, searchMode), options.historyMode ?? "push");
       }
 
-      if (result.stations.length === 1 && searchMode !== "train") {
+      const exactStation = searchMode !== "train" ? exactStationMatch(result.stations, value) : null;
+
+      if (exactStation) {
+        await loadStation(exactStation, false, { historyMode: options.historyMode });
+      } else if (result.stations.length === 1 && searchMode !== "train") {
         await loadStation(result.stations[0], false, { historyMode: options.historyMode });
       } else if (result.stations.length === 0 && result.trains[0]) {
         const trainMatch = preferredTrain(result.trains, options.preferTrainSlug);
@@ -1101,12 +1105,12 @@ function BoardRow({
       </span>
       <span className="direction-cell board-route-summary">
         <span>
-          <b>{t("results.departureShort")}</b>
+          <b>{t("board.from")}</b>
           <span>{item.origin ?? "-"}</span>
           <time>{formatClock(item.firstDeparture, dateTimeLocale)}</time>
         </span>
         <span>
-          <b>{t("results.arrivalShort")}</b>
+          <b>{t("board.to")}</b>
           <span>{item.destination ?? "-"}</span>
           <time>{formatClock(item.lastArrival, dateTimeLocale)}</time>
         </span>
@@ -1459,6 +1463,22 @@ function preferredTrain(trains: TrainSummary[], preferredSlug?: string) {
   const readable = deslug(preferredSlug).toLowerCase();
 
   return trains.find((train) => train.label.toLowerCase().includes(readable) || trainNumber(train) === readable) ?? trains[0];
+}
+
+function exactStationMatch(stations: StationSuggestion[], query: string) {
+  const normalizedQuery = normalizeStationName(query);
+
+  return stations.find((station) => normalizeStationName(station.name) === normalizedQuery) ?? null;
+}
+
+function normalizeStationName(value: string) {
+  return value
+    .replace(/[łŁ]/g, (match) => (match === "Ł" ? "L" : "l"))
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
 }
 
 function pageTitle(station: StationResponse | null, train: TrainResponse | null, t: TranslateFn) {
