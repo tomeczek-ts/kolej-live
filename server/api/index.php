@@ -306,7 +306,7 @@ function suggestEndpoint(PdpClient $client): array
         $suggestions[] = [
             'type' => 'train',
             'label' => $train['label'],
-            'subtitle' => trim(($train['origin'] ?? '-') . ' -> ' . ($train['destination'] ?? '-')),
+            'subtitle' => trainSuggestionSubtitle($train),
             'value' => $train['label'],
             'scheduleId' => $train['scheduleId'],
             'orderId' => $train['orderId'],
@@ -551,7 +551,7 @@ function trainSuggestions(PdpClient $client, string $query, string $date, int $l
 {
     $cached = data_find_items('trains-' . $date . '.json', $query, $limit, ['label', 'name', 'number', 'category', 'carrierCode', 'origin', 'destination']);
     if ($cached !== []) {
-        return array_values(array_map(static fn(array $train): array => [
+        $matches = array_values(array_map(static fn(array $train): array => [
             'scheduleId' => (int) ($train['scheduleId'] ?? 0),
             'orderId' => (int) ($train['orderId'] ?? 0),
             'operationOrderId' => (int) ($train['operationOrderId'] ?? $train['orderId'] ?? 0),
@@ -568,8 +568,23 @@ function trainSuggestions(PdpClient $client, string $query, string $date, int $l
             'firstDeparture' => cleanNullable($train['firstDeparture'] ?? null),
             'lastArrival' => cleanNullable($train['lastArrival'] ?? null),
         ], array_filter($cached, static fn(array $train): bool => !empty($train['scheduleId']) && !empty($train['orderId']))));
+
+        if (trainSuggestionsNeedTimes($matches)) {
+            try {
+                return mergeTrainSuggestionTimes($matches, liveTrainSuggestions($client, $query, $date, $limit));
+            } catch (Throwable $exception) {
+                return $matches;
+            }
+        }
+
+        return $matches;
     }
 
+    return liveTrainSuggestions($client, $query, $date, $limit);
+}
+
+function liveTrainSuggestions(PdpClient $client, string $query, string $date, int $limit): array
+{
     $response = pdp_schedules_for_day($client, $date);
 
     $stationDict = $response['dictionaries']['stations'] ?? [];
@@ -588,6 +603,65 @@ function trainSuggestions(PdpClient $client, string $query, string $date, int $l
     }
 
     return $matches;
+}
+
+function trainSuggestionsNeedTimes(array $matches): bool
+{
+    foreach ($matches as $train) {
+        if (empty($train['firstDeparture']) || empty($train['lastArrival'])) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function mergeTrainSuggestionTimes(array $cached, array $live): array
+{
+    $liveByKey = [];
+    foreach ($live as $train) {
+        $key = trainSuggestionKey($train);
+        if ($key !== null) {
+            $liveByKey[$key] = $train;
+        }
+    }
+
+    return array_values(array_map(static function (array $train) use ($liveByKey): array {
+        $key = trainSuggestionKey($train);
+        $live = $key !== null ? ($liveByKey[$key] ?? null) : null;
+        if ($live === null) {
+            return $train;
+        }
+
+        foreach (['origin', 'destination', 'firstDeparture', 'lastArrival'] as $field) {
+            if (empty($train[$field]) && !empty($live[$field])) {
+                $train[$field] = $live[$field];
+            }
+        }
+
+        return $train;
+    }, $cached));
+}
+
+function trainSuggestionKey(array $train): ?string
+{
+    $scheduleId = (int) ($train['scheduleId'] ?? 0);
+    $orderId = (int) ($train['orderId'] ?? 0);
+    if ($scheduleId <= 0 || $orderId <= 0) {
+        return null;
+    }
+
+    return $scheduleId . ':' . $orderId;
+}
+
+function trainSuggestionSubtitle(array $train): string
+{
+    $origin = cleanNullable($train['origin'] ?? null) ?? '-';
+    $destination = cleanNullable($train['destination'] ?? null) ?? '-';
+    $departure = clockFromIso($train['firstDeparture'] ?? null);
+    $arrival = clockFromIso($train['lastArrival'] ?? null);
+
+    return trim($origin . ' ' . ($departure ?? '') . ' -> ' . ($arrival ?? '') . ' ' . $destination);
 }
 
 function trainsForDay(PdpClient $client, string $date): array
@@ -1636,6 +1710,20 @@ function timestampOrNull($value): ?int
 
     try {
         return (new DateTimeImmutable($string, new DateTimeZone('Europe/Warsaw')))->getTimestamp();
+    } catch (Throwable $exception) {
+        return null;
+    }
+}
+
+function clockFromIso($value): ?string
+{
+    $string = cleanNullable($value);
+    if ($string === null) {
+        return null;
+    }
+
+    try {
+        return (new DateTimeImmutable($string))->setTimezone(new DateTimeZone('Europe/Warsaw'))->format('H:i');
     } catch (Throwable $exception) {
         return null;
     }

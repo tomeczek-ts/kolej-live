@@ -50,6 +50,21 @@ const demoSeoLinks: SeoLinksResponse = {
   demo: true,
 };
 
+function demoTrainSubtitle() {
+  const departure = demoClock(demoTrain.train.firstDeparture);
+  const arrival = demoClock(demoTrain.train.lastArrival);
+
+  return `${demoTrain.train.origin ?? "-"} ${departure} -> ${arrival} ${demoTrain.train.destination ?? "-"}`.trim();
+}
+
+function demoClock(value: string | null | undefined) {
+  if (!value) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("pl-PL", { hour: "2-digit", minute: "2-digit" }).format(new Date(value));
+}
+
 async function request<T>(params: Record<string, string | number | undefined>, demoValue: T): Promise<T> {
   const url = new URL(API_URL, window.location.origin);
   Object.entries(params).forEach(([key, value]) => {
@@ -96,7 +111,7 @@ export const api = {
           {
             type: "train",
             label: demoTrain.train.label,
-            subtitle: `${demoTrain.train.origin ?? "-"} -> ${demoTrain.train.destination ?? "-"}`,
+            subtitle: demoTrainSubtitle(),
             value: demoTrain.train.label,
             scheduleId: demoTrain.train.scheduleId,
             orderId: demoTrain.train.orderId,
