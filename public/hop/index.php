@@ -585,7 +585,7 @@ try {
     th:first-child, td:first-child { position: sticky; left: 0; z-index: 2; text-align: left; background: #fff; }
     th:first-child { background: var(--soft); z-index: 3; }
     tbody tr > td { border-bottom: 2px solid #c5ccd5; }
-    .station { min-width: 260px; font-weight: 760; }
+    .station { width: 220px; min-width: 220px; max-width: 220px; font-weight: 760; white-space: normal; line-height: 1.25; }
     td.observation { min-width: 138px; padding: 0; vertical-align: middle; }
     .stop-cell { display: grid; min-width: 132px; }
     .stop-line { display: grid; grid-template-columns: 46px minmax(76px, 1fr); align-items: center; min-height: 28px; border-bottom: 1px solid #edf0f3; }
@@ -617,6 +617,7 @@ try {
       .brand-logo { width: 154px; }
       .metrics { grid-template-columns: 1fr 1fr; }
       .delay-panels { grid-template-columns: 1fr; }
+      th.station, td.station { width: 136px; min-width: 136px; max-width: 136px; padding: 8px; font-size: 13px; }
     }
   </style>
 </head>
@@ -696,7 +697,7 @@ try {
         <?php if ($dates === [] || $rows === []): ?>
           <div class="hint"><?= e(hop_t('hop.train_empty')) ?></div>
         <?php else: ?>
-          <div class="table-wrap">
+          <div class="table-wrap" data-history-table>
             <table>
               <thead>
                 <tr>
@@ -819,6 +820,7 @@ try {
       var chooseSuggestionMessage = <?= json_encode(hop_t('hop.search.choose_suggestion'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '""' ?>;
       var slugByLabel = {};
       var currentSlug = serviceSlug.value;
+      var historyTable = document.querySelector('[data-history-table]');
 
       options.forEach(function (option) {
         slugByLabel[option.label] = option.slug || '';
@@ -885,6 +887,12 @@ try {
           input.reportValidity();
         }
       });
+
+      if (historyTable) {
+        requestAnimationFrame(function () {
+          historyTable.scrollLeft = historyTable.scrollWidth;
+        });
+      }
     }());
   </script>
 </body>
