@@ -612,6 +612,39 @@ a {
   white-space: nowrap;
 }
 
+.result-row small.train-result-route {
+  display: grid;
+  gap: 3px;
+  overflow: visible;
+  white-space: normal;
+}
+
+.train-result-route > span {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: baseline;
+}
+
+.train-result-route b {
+  color: #3c4654;
+  font-size: 11px;
+  font-weight: 820;
+  text-transform: uppercase;
+}
+
+.train-result-route span span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.train-result-route time {
+  color: var(--ink);
+  font-weight: 790;
+}
+
 .route-prompt {
   min-height: 540px;
 }

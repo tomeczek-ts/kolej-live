@@ -41,6 +41,8 @@ return [
     'results.trains' => 'Trains',
     'results.noStations' => 'No matching stations.',
     'results.noTrains' => 'No matching trains.',
+    'results.departureShort' => 'Dep.',
+    'results.arrivalShort' => 'Arr.',
     'seoLinks.title' => 'Recently searched',
     'seoLinks.empty' => 'No saved links yet.',
     'loading.results' => 'Loading results',

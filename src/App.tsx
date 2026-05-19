@@ -608,6 +608,7 @@ export default function App() {
             onTrain={loadTrain}
             activeStationId={station?.station.id}
             activeTrainId={train ? `${train.train.scheduleId}-${train.train.orderId}` : null}
+            dateTimeLocale={dateTimeLocale}
           />
           <SeoLinksPanel links={seoLinks?.links ?? []} t={t} onSeoLink={navigateToSeoLink} />
         </aside>
@@ -766,6 +767,7 @@ function SearchResults({
   onTrain,
   activeStationId,
   activeTrainId,
+  dateTimeLocale,
 }: {
   search: SearchResponse | null;
   loading: boolean;
@@ -774,6 +776,7 @@ function SearchResults({
   onTrain: (train: TrainSummary) => void;
   activeStationId?: number;
   activeTrainId: string | null;
+  dateTimeLocale: string;
 }) {
   if (loading && !search) {
     return <PanelLoader label={t("loading.results")} />;
@@ -844,8 +847,17 @@ function SearchResults({
                 <TrainFront size={18} />
                 <span>
                   <strong>{train.label}</strong>
-                  <small>
-                    {link.subtitle} - {train.origin ?? "-"} {"->"} {train.destination ?? "-"}
+                  <small className="train-result-route">
+                    <span>
+                      <b>{t("results.departureShort")}</b>
+                      <span>{train.origin ?? "-"}</span>
+                      <time>{formatClock(train.firstDeparture, dateTimeLocale)}</time>
+                    </span>
+                    <span>
+                      <b>{t("results.arrivalShort")}</b>
+                      <span>{train.destination ?? "-"}</span>
+                      <time>{formatClock(train.lastArrival, dateTimeLocale)}</time>
+                    </span>
                   </small>
                 </span>
                 <ChevronRight size={17} />

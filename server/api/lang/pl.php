@@ -41,6 +41,8 @@ return [
     'results.trains' => 'Pociągi',
     'results.noStations' => 'Brak dopasowanych stacji.',
     'results.noTrains' => 'Brak dopasowanych pociągów.',
+    'results.departureShort' => 'Odj.',
+    'results.arrivalShort' => 'Przyj.',
     'seoLinks.title' => 'Ostatnio wyszukiwane',
     'seoLinks.empty' => 'Brak zapisanych linkow.',
     'loading.results' => 'Pobieranie wyników',
