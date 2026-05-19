@@ -7,6 +7,7 @@ import {
   ChevronRight,
   CircleOff,
   Clock3,
+  ExternalLink,
   Languages,
   Loader2,
   MapPin,
@@ -35,6 +36,7 @@ import type { Locale, TextsByLocale, TranslateFn } from "./i18n";
 import { popularStationSuggestions } from "./popularStations";
 import {
   deslug,
+  isPublicStationName,
   routeFromLocation,
   searchHref,
   stationHref,
@@ -63,6 +65,12 @@ import type {
   TrainResponse,
   TrainSummary,
 } from "./types";
+
+type PendingDetail = {
+  title: string;
+  overlineKey: string;
+  loadingKey: string;
+};
 
 const today = new Date().toISOString().slice(0, 10);
 const defaultQuery = "";
@@ -100,6 +108,7 @@ export default function App() {
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [suggestionLoading, setSuggestionLoading] = useState(false);
   const [boardKind, setBoardKind] = useState<BoardKind>("departure");
+  const [pendingDetail, setPendingDetail] = useState<PendingDetail | null>(null);
   const [loading, setLoading] = useState<"search" | "station" | "train" | "trainList" | "stats" | "disruptions" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const t = useMemo<TranslateFn>(() => (key, values) => translate(locale, key, values, textMaps), [locale, textMaps]);
@@ -276,6 +285,7 @@ export default function App() {
     setSuggestions(popularStationSuggestions);
     setSuggestionsOpen(false);
     setBoardKind("departure");
+    setPendingDetail(null);
     setView("status");
     writeBrowserUrl("/", "push");
   }
@@ -289,6 +299,10 @@ export default function App() {
   }
 
   async function trackSeoLink(link: SeoLink) {
+    if (link.type === "station" && !isPublicStationName(link.label)) {
+      return;
+    }
+
     try {
       await api.trackLink(link);
       await refreshSeoLinks();
@@ -361,10 +375,11 @@ export default function App() {
     setSuggestionsOpen(false);
     setError(null);
     setTrainList(null);
+    const searchMode = overrideMode ?? mode;
+    setPendingDetail(searchPendingDetail(value, searchMode));
     setLoading("search");
 
     try {
-      const searchMode = overrideMode ?? mode;
       const result = await api.search(value, searchMode, date);
       setSearch(result);
 
@@ -385,12 +400,14 @@ export default function App() {
     } catch (cause) {
       setError(errorMessage(cause, t));
     } finally {
+      setPendingDetail(null);
       setLoading(null);
     }
   }
 
   async function loadStation(item: StationSuggestion, showLoading = true, options: { historyMode?: "push" | "replace"; updateUrl?: boolean; track?: boolean } = {}) {
     setError(null);
+    setPendingDetail({ title: item.name, overlineKey: "detail.station", loadingKey: "loading.board" });
     setTrain(null);
     setTrainList(null);
     if (view === "arrivals") {
@@ -414,16 +431,18 @@ export default function App() {
     } catch (cause) {
       setError(errorMessage(cause, t));
     } finally {
+      setPendingDetail(null);
       if (showLoading) setLoading(null);
     }
   }
 
   async function loadTrain(
-    item: Pick<TrainSummary, "scheduleId" | "orderId" | "operationOrderId" | "operatingDate">,
+    item: Pick<TrainSummary, "scheduleId" | "orderId" | "operationOrderId" | "operatingDate"> & Partial<Pick<TrainSummary, "label">>,
     showLoading = true,
     options: { historyMode?: "push" | "replace"; updateUrl?: boolean; track?: boolean } = {},
   ) {
     setError(null);
+    setPendingDetail({ title: item.label ?? `${t("detail.route")} ${item.orderId}`, overlineKey: "detail.route", loadingKey: "loading.train" });
     setView("route");
     setTrainList(null);
     if (showLoading) setLoading("train");
@@ -441,12 +460,14 @@ export default function App() {
     } catch (cause) {
       setError(errorMessage(cause, t));
     } finally {
+      setPendingDetail(null);
       if (showLoading) setLoading(null);
     }
   }
 
   async function loadTrainList(kind: TrainListKind, showLoading = true, options: { historyMode?: "push" | "replace"; updateUrl?: boolean; date?: string } = {}) {
     setError(null);
+    setPendingDetail(null);
     setTrain(null);
     setStation(null);
     setView("trains");
@@ -496,6 +517,7 @@ export default function App() {
         orderId: item.orderId,
         operationOrderId: item.operationOrderId,
         operatingDate: item.operatingDate,
+        label: item.label,
       });
       return;
     }
@@ -533,8 +555,12 @@ export default function App() {
               {item.label}
             </button>
           ))}
-          <a className="history-link" href="https://hop.kolej.live/">
-            {t("nav.delayHistory")}
+          <a className="history-link" href="https://hop.kolej.live/" target="_blank" rel="noreferrer" aria-label={t("nav.delayHistoryService")}>
+            <span>
+              <strong>{t("nav.delayHistory")}</strong>
+              <small>hop.kolej.live</small>
+            </span>
+            <ExternalLink size={14} />
           </a>
         </nav>
         <div className="topbar-actions">
@@ -651,7 +677,9 @@ export default function App() {
         </aside>
 
         <section className="detail-panel">
-          {view === "trains" ? (
+          {pendingDetail && (loading === "search" || loading === "station" || loading === "train") ? (
+            <PendingDetailPanel pending={pendingDetail} t={t} />
+          ) : view === "trains" ? (
             <TrainListView
               trainList={trainList}
               loading={loading === "trainList"}
@@ -1465,6 +1493,18 @@ function preferredTrain(trains: TrainSummary[], preferredSlug?: string) {
   return trains.find((train) => train.label.toLowerCase().includes(readable) || trainNumber(train) === readable) ?? trains[0];
 }
 
+function searchPendingDetail(title: string, mode: SearchMode): PendingDetail {
+  if (mode === "station") {
+    return { title, overlineKey: "detail.station", loadingKey: "loading.results" };
+  }
+
+  if (mode === "train") {
+    return { title, overlineKey: "detail.route", loadingKey: "loading.results" };
+  }
+
+  return { title, overlineKey: "detail.search", loadingKey: "loading.results" };
+}
+
 function exactStationMatch(stations: StationSuggestion[], query: string) {
   const normalizedQuery = normalizeStationName(query);
 
@@ -1526,6 +1566,20 @@ function EmptyState({ t }: { t: TranslateFn }) {
       <h2>{t("empty.title")}</h2>
       <p>{t("empty.body")}</p>
     </div>
+  );
+}
+
+function PendingDetailPanel({ pending, t }: { pending: PendingDetail; t: TranslateFn }) {
+  return (
+    <>
+      <div className="detail-header">
+        <div>
+          <span className="overline">{t(pending.overlineKey)}</span>
+          <h2>{pending.title}</h2>
+        </div>
+      </div>
+      <PanelLoader label={t(pending.loadingKey)} />
+    </>
   );
 }
 

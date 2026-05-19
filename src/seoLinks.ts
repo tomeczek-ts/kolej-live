@@ -131,6 +131,18 @@ export function stationSeoLink(station: StationLinkSource, source?: SeoLink["sou
   };
 }
 
+export function isPublicStationName(name: string) {
+  const value = name.trim();
+  if (!value || value.includes(" -") || /^(stacja|station)\s+\d+$/iu.test(value)) {
+    return false;
+  }
+
+  const lettersOnly = value.replace(/[^\p{L}]+/gu, "");
+  if (!lettersOnly) return false;
+
+  return value !== value.toLocaleUpperCase("pl-PL");
+}
+
 export function trainSeoLink(train: TrainLinkSource, source?: SeoLink["source"]): SeoLink {
   const slug = slugify(train.label);
   const number = trainNumber(train);

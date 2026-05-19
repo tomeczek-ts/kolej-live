@@ -192,6 +192,10 @@ function trackLinkEndpoint(): array
         return ['ok' => false, 'generatedAt' => gmdate(DATE_ATOM)];
     }
 
+    if ($type === 'station' && !isPublicStationName($label)) {
+        return ['ok' => false, 'generatedAt' => gmdate(DATE_ATOM)];
+    }
+
     $link = [
         'type' => $type,
         'label' => truncateText($label, 120),
@@ -208,6 +212,10 @@ function trackLinkEndpoint(): array
 
     foreach ($items as $item) {
         if (!is_array($item) || ($item['href'] ?? null) === $href) {
+            continue;
+        }
+
+        if (($item['type'] ?? null) === 'station' && !isPublicStationName((string) ($item['label'] ?? ''))) {
             continue;
         }
 
@@ -822,7 +830,7 @@ function stationSeoLinkFromRow(array $station, string $source): ?array
 function isPublicStationName(string $name): bool
 {
     $name = trim($name);
-    if ($name === '' || strpos($name, ' -') !== false) {
+    if ($name === '' || strpos($name, ' -') !== false || preg_match('/^(stacja|station)\s+\d+$/iu', $name) === 1) {
         return false;
     }
 

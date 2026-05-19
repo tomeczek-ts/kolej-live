@@ -153,16 +153,41 @@ a {
 }
 
 .main-nav .history-link {
-  min-height: 36px;
-  padding: 0 12px;
-  color: #ffffff;
-  background: var(--red);
+  min-height: 42px;
+  gap: 8px;
+  padding: 6px 10px;
+  color: var(--ink);
+  background: #ffffff;
+  border: 1px solid var(--line);
   border-radius: 8px;
-  box-shadow: 0 10px 20px rgba(199, 34, 42, 0.18);
+  box-shadow: none;
+}
+
+.main-nav .history-link span {
+  display: grid;
+  gap: 1px;
+}
+
+.main-nav .history-link strong {
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.05;
+}
+
+.main-nav .history-link small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 760;
+  line-height: 1.05;
+}
+
+.main-nav .history-link svg {
+  color: var(--red);
 }
 
 .main-nav .history-link:hover {
-  background: var(--red-dark);
+  border-color: #aeb8c4;
+  background: #f9fafb;
 }
 
 .stats-strip {
