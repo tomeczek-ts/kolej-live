@@ -413,35 +413,30 @@ export default function App() {
       return;
     }
 
-    const title = t("search.location");
     setError(null);
-    setSearch(null);
-    setStation(null);
-    setTrain(null);
-    setTrainList(null);
+    setQuery(defaultQuery);
     setMode("station");
-    setView("status");
-    setQuery(title);
-    setSuggestionsOpen(false);
-    setPendingDetail({ title, overlineKey: "detail.station", loadingKey: "loading.location" });
+    setSuggestions([]);
+    setSuggestionsOpen(true);
     setLocationLoading(true);
 
     try {
       const position = await readCurrentPosition();
       const result = await api.nearbyStations(position.coords.latitude, position.coords.longitude);
-      setSearch({
-        query: title,
-        date,
-        stations: result.stations,
-        trains: [],
-        warnings: result.warnings ?? [],
-        generatedAt: result.generatedAt,
-        demo: result.demo,
-      });
+      const stationLabel = t("suggestions.station");
+      setSuggestions(result.stations.map((station) => ({
+        type: "station",
+        label: station.name,
+        subtitle: station.distanceKm !== undefined
+          ? `${t("results.distanceKm", { distance: formatDistanceKm(station.distanceKm, dateTimeLocale) })} · ${stationLabel}`
+          : stationLabel,
+        value: station.name,
+        stationId: station.id,
+      })));
+      setSuggestionsOpen(true);
     } catch (cause) {
       setError(geolocationErrorMessage(cause, t));
     } finally {
-      setPendingDetail(null);
       setLocationLoading(false);
     }
   }
@@ -658,10 +653,10 @@ export default function App() {
             <button className="icon-button primary" type="submit" aria-label={t("search.submit")} disabled={loading === "search"}>
               {loading === "search" ? <Loader2 className="spin" size={18} /> : <ChevronRight size={19} />}
             </button>
-            {suggestionsOpen && (suggestionLoading || suggestions.length > 0) && (
+            {suggestionsOpen && (suggestionLoading || locationLoading || suggestions.length > 0) && (
               <Suggestions
                 items={suggestions}
-                loading={suggestionLoading}
+                loading={suggestionLoading || locationLoading}
                 t={t}
                 onPick={chooseSuggestion}
               />
@@ -717,7 +712,7 @@ export default function App() {
         <aside className="results-panel">
           <SearchResults
             search={search}
-            loading={loading === "search" || locationLoading}
+            loading={loading === "search"}
             t={t}
             onStation={loadStation}
             onTrain={loadTrain}
@@ -1500,7 +1495,7 @@ function hasTemplatePlaceholder(value: string): boolean {
 }
 
 function suggestionSubtitle(item: SearchSuggestion, t: TranslateFn) {
-  if (item.type === "station") return t("suggestions.station");
+  if (item.type === "station") return item.subtitle || t("suggestions.station");
   if (item.type === "train") return item.subtitle || t("suggestions.train");
   if (item.type === "carrier") return item.subtitle || t("suggestions.carrier");
   if (item.type === "category") return item.subtitle || t("suggestions.category");
