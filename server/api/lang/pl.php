@@ -59,7 +59,7 @@ return [
     'board.arrivals' => 'Przyjazdy',
     'board.time' => 'Czas',
     'board.train' => 'Pociąg',
-    'board.direction' => 'Kierunek',
+    'board.direction' => 'Relacja',
     'board.platform' => 'Peron',
     'board.status' => 'Status',
     'board.empty' => 'Brak połączeń dla wybranego dnia.',

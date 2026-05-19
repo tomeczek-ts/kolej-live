@@ -1047,7 +1047,6 @@ function BoardRow({
   dateTimeLocale: string;
 }) {
   const DirectionIcon = item.kind === "departure" ? ArrowUpFromLine : ArrowDownToLine;
-  const direction = item.kind === "departure" ? item.destination : item.origin;
   const href = trainHref(item);
 
   return (
@@ -1070,7 +1069,18 @@ function BoardRow({
           <small>{item.carrierCode ?? "PLK"}</small>
         </span>
       </span>
-      <span className="direction-cell">{direction ?? "-"}</span>
+      <span className="direction-cell board-route-summary">
+        <span>
+          <b>{t("results.departureShort")}</b>
+          <span>{item.origin ?? "-"}</span>
+          <time>{formatClock(item.firstDeparture, dateTimeLocale)}</time>
+        </span>
+        <span>
+          <b>{t("results.arrivalShort")}</b>
+          <span>{item.destination ?? "-"}</span>
+          <time>{formatClock(item.lastArrival, dateTimeLocale)}</time>
+        </span>
+      </span>
       <span className="platform-cell">
         <strong>{item.platform ?? "-"}</strong>
         <small>

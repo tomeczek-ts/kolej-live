@@ -59,7 +59,7 @@ return [
     'board.arrivals' => 'Arrivals',
     'board.time' => 'Time',
     'board.train' => 'Train',
-    'board.direction' => 'Direction',
+    'board.direction' => 'Route',
     'board.platform' => 'Platform',
     'board.status' => 'Status',
     'board.empty' => 'No connections for the selected day.',

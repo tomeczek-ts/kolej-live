@@ -923,6 +923,8 @@ function boardItem(string $kind, array $summary, int $stationId, string $planned
         'carrierCode' => $summary['carrierCode'],
         'origin' => $summary['origin'],
         'destination' => $summary['destination'],
+        'firstDeparture' => $summary['firstDeparture'] ?? null,
+        'lastArrival' => $summary['lastArrival'] ?? null,
         'plannedTime' => $plannedTime,
         'actualTime' => $actualTime,
         'delayMinutes' => $delayMinutes,

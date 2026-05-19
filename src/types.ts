@@ -68,6 +68,8 @@ export interface BoardItem {
   carrierCode: string | null;
   origin: string | null;
   destination: string | null;
+  firstDeparture: string | null;
+  lastArrival: string | null;
   plannedTime: string;
   actualTime: string | null;
   delayMinutes: number | null;
