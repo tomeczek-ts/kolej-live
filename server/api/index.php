@@ -243,7 +243,7 @@ function trackLinkEndpoint(): array
         'label' => truncateText($label, 120),
         'slug' => $slug !== null ? seoSlug($slug) : seoSlug($label),
         'href' => $href,
-        'subtitle' => $subtitle !== null ? truncateText($subtitle, 140) : seoSlug($label),
+        'subtitle' => $type === 'station' ? 'Stacja' : ($subtitle !== null ? truncateText($subtitle, 140) : seoSlug($label)),
         'source' => 'recent',
         'lastSeenAt' => gmdate(DATE_ATOM),
     ];
@@ -863,7 +863,7 @@ function recentSeoLinks(int $limit): array
             'label' => $label,
             'slug' => seoSlug($item['slug'] ?? $label),
             'href' => $href,
-            'subtitle' => cleanNullable($item['subtitle'] ?? null) ?? seoSlug($label),
+            'subtitle' => $type === 'station' ? 'Stacja' : (cleanNullable($item['subtitle'] ?? null) ?? seoSlug($label)),
             'source' => 'recent',
         ];
 
@@ -935,7 +935,7 @@ function stationSeoLinkFromRow(array $station, string $source): ?array
         'label' => $name,
         'slug' => $slug,
         'href' => '/?stacja=' . rawurlencode($slug) . '&id_stacji=' . $id,
-        'subtitle' => $slug,
+        'subtitle' => 'Stacja',
         'source' => $source,
     ];
 }

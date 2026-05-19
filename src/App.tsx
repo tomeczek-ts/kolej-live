@@ -899,12 +899,16 @@ function SearchResults({
     return <PanelLoader label={t("loading.results")} />;
   }
 
+  const stationResults = search?.stations ?? [];
+  const trainResults = search?.trains ?? [];
+  const resultCount = stationResults.length + trainResults.length;
+
   return (
     <>
       <div className="panel-title">
         <div>
           <h2>{t("results.title")}</h2>
-          <span>{search ? t("results.count", { count: search.stations.length + search.trains.length }) : t("results.ready")}</span>
+          <span>{search ? t("results.count", { count: resultCount }) : t("results.ready")}</span>
         </div>
       </div>
 
@@ -916,10 +920,11 @@ function SearchResults({
       ))}
 
       <div className="result-group">
-        <h3>{t("results.stations")}</h3>
-        {search?.stations.length ? (
-          search.stations.map((station) => {
-            const link = stationSeoLink(station);
+        <h3>{t("results.matches")}</h3>
+        {resultCount > 0 ? (
+          <>
+          {stationResults.map((station) => {
+            const link = { ...stationSeoLink(station), slug: t("suggestions.station") };
 
             return (
               <a
@@ -937,22 +942,14 @@ function SearchResults({
                   <small>
                     {station.distanceKm !== undefined
                       ? `${t("results.distanceKm", { distance: formatDistanceKm(station.distanceKm, dateTimeLocale) })} · ${link.slug}`
-                      : link.slug}
+                      : t("suggestions.station")}
                   </small>
                 </span>
                 <ChevronRight size={17} />
               </a>
             );
-          })
-        ) : (
-          <div className="muted-row">{t("results.noStations")}</div>
-        )}
-      </div>
-
-      <div className="result-group">
-        <h3>{t("results.trains")}</h3>
-        {search?.trains.length ? (
-          search.trains.map((train) => {
+          })}
+            {trainResults.map((train) => {
             const link = trainSeoLink(train);
 
             return (
@@ -984,9 +981,10 @@ function SearchResults({
                 <ChevronRight size={17} />
               </a>
             );
-          })
+          })}
+          </>
         ) : (
-          <div className="muted-row">{t("results.noTrains")}</div>
+          <div className="muted-row">{t("results.empty")}</div>
         )}
       </div>
     </>
@@ -1007,7 +1005,7 @@ function SeoLinksPanel({ links, t, onSeoLink }: { links: SeoLink[]; t: Translate
               {link.type === "train" ? <TrainFront size={16} /> : <MapPin size={16} />}
               <span>
                 <strong>{link.label}</strong>
-                <small>{link.subtitle ?? link.slug}</small>
+                <small>{link.type === "station" ? t("suggestions.station") : link.subtitle ?? link.slug}</small>
               </span>
             </a>
           ))}

@@ -126,7 +126,7 @@ export function stationSeoLink(station: StationLinkSource, source?: SeoLink["sou
     label: station.name,
     slug,
     href: stationHref(station),
-    subtitle: slug,
+    subtitle: "Stacja",
     source,
   };
 }
@@ -173,7 +173,7 @@ export function routeFromLocation(location: Pick<Location, "search">): UrlRoute 
   }
 
   const trainSlug = params.get("pociag") ?? params.get("train") ?? "";
-  const number = params.get("nr") ?? params.get("number") ?? "";
+  const number = params.get("nr") ?? params.get("number") ?? trainNumberFromSlug(trainSlug);
   if (trainSlug || number) {
     return {
       type: "train",
@@ -239,4 +239,8 @@ function trainListKindFromParam(value: string | null): TrainListKind | null {
   if (value === "pociagi-odwolane" || value === "cancelled") return "cancelled";
 
   return null;
+}
+
+function trainNumberFromSlug(value: string) {
+  return value.match(/\b\d{2,7}\b/)?.[0] ?? "";
 }

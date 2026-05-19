@@ -40,6 +40,8 @@ return [
     'results.title' => 'Results',
     'results.ready' => 'Ready to search',
     'results.count' => '{count} results',
+    'results.matches' => 'Matches',
+    'results.empty' => 'No matching results.',
     'results.stations' => 'Stations',
     'results.trains' => 'Trains',
     'results.noStations' => 'No matching stations.',

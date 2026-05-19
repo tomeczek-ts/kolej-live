@@ -40,6 +40,8 @@ return [
     'results.title' => 'Wyniki',
     'results.ready' => 'Gotowe do wyszukiwania',
     'results.count' => '{count} trafień',
+    'results.matches' => 'Dopasowania',
+    'results.empty' => 'Brak dopasowanych wyników.',
     'results.stations' => 'Stacje',
     'results.trains' => 'Pociągi',
     'results.noStations' => 'Brak dopasowanych stacji.',
