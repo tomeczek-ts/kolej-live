@@ -106,6 +106,32 @@ function station_coordinates_normalize_name(string $name): string
     return trim(preg_replace('/[^a-z0-9]+/', ' ', (string) $ascii) ?? $lower);
 }
 
+function station_coordinates_name_keys(string $name): array
+{
+    $variants = [$name];
+    $withoutParentheses = preg_replace('/\s*\([^)]*\)\s*/u', ' ', $name);
+    if (is_string($withoutParentheses)) {
+        $variants[] = $withoutParentheses;
+    }
+
+    foreach (['SKM', 'WKD', 'PKM', 'PKP'] as $suffix) {
+        $stripped = preg_replace('/\s+' . preg_quote($suffix, '/') . '$/iu', '', $name);
+        if (is_string($stripped)) {
+            $variants[] = $stripped;
+        }
+    }
+
+    $keys = [];
+    foreach ($variants as $variant) {
+        $key = station_coordinates_normalize_name($variant);
+        if ($key !== '') {
+            $keys[$key] = true;
+        }
+    }
+
+    return array_keys($keys);
+}
+
 function station_coordinates_array_is_list(array $value): bool
 {
     $expected = 0;
@@ -117,6 +143,38 @@ function station_coordinates_array_is_list(array $value): bool
     }
 
     return true;
+}
+
+function station_coordinates_cached_items(): array
+{
+    if (!function_exists('data_read_json')) {
+        return [];
+    }
+
+    $payload = data_read_json('station-coordinates.json');
+    $items = is_array($payload['items'] ?? null) ? $payload['items'] : [];
+    $normalized = [];
+
+    foreach ($items as $item) {
+        if (!is_array($item) || !isset($item['id'], $item['name'], $item['latitude'], $item['longitude'])) {
+            continue;
+        }
+
+        $lat = station_coordinates_float($item['latitude']);
+        $lon = station_coordinates_float($item['longitude']);
+        if ($lat === null || $lon === null || !station_coordinates_are_valid($lat, $lon)) {
+            continue;
+        }
+
+        $normalized[] = [
+            'id' => (int) $item['id'],
+            'name' => trim((string) $item['name']),
+            'latitude' => $lat,
+            'longitude' => $lon,
+        ];
+    }
+
+    return $normalized;
 }
 
 /**

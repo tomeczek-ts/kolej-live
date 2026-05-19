@@ -478,6 +478,11 @@ function stationSuggestions(PdpClient $client, string $query, int $limit): array
 
 function stationsWithCoordinates(PdpClient $client): array
 {
+    $cachedCoordinates = station_coordinates_cached_items();
+    if ($cachedCoordinates !== []) {
+        return array_values(array_filter($cachedCoordinates, static fn(array $station): bool => isPublicStationName((string) $station['name'])));
+    }
+
     $payload = data_read_json('stations.json');
     $rows = is_array($payload['items'] ?? null) ? $payload['items'] : [];
 
@@ -487,10 +492,12 @@ function stationsWithCoordinates(PdpClient $client): array
 
     $fallbacks = [];
     foreach (station_coordinates_fallbacks() as $fallback) {
-        $fallbacks[station_coordinates_normalize_name((string) $fallback['name'])] = [
-            'latitude' => (float) $fallback['latitude'],
-            'longitude' => (float) $fallback['longitude'],
-        ];
+        foreach (station_coordinates_name_keys((string) $fallback['name']) as $key) {
+            $fallbacks[$key] = [
+                'latitude' => (float) $fallback['latitude'],
+                'longitude' => (float) $fallback['longitude'],
+            ];
+        }
     }
 
     $items = [];
@@ -504,7 +511,16 @@ function stationsWithCoordinates(PdpClient $client): array
             continue;
         }
 
-        $coordinates = station_coordinates_from_row($row) ?? $fallbacks[station_coordinates_normalize_name($name)] ?? null;
+        $coordinates = station_coordinates_from_row($row);
+        if ($coordinates === null) {
+            foreach (station_coordinates_name_keys($name) as $key) {
+                if (isset($fallbacks[$key])) {
+                    $coordinates = $fallbacks[$key];
+                    break;
+                }
+            }
+        }
+
         if ($coordinates === null) {
             continue;
         }

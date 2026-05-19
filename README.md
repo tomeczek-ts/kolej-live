@@ -63,6 +63,20 @@ Exact PDP calls are split into small files in `server/api/pdp/`:
 
 Autocomplete reads generated files from `server/api/data/` first and falls back to PDP API when a file is missing.
 
+Nearest-station search reads `server/api/data/station-coordinates.json`. PDP provides station IDs and names, while `api/station_coordinates_refresh.php` refreshes coordinates from OpenStreetMap/Overpass and stores matched PDP station IDs in cache. This file does not need frequent cron updates; refresh it manually a few times per year or after larger timetable/station changes.
+
+Preferred CLI refresh:
+
+```bash
+/usr/bin/php -q /home/USER/domains/kolej.live/public_html/api/station_coordinates_refresh.php
+```
+
+If the hosting panel supports only URL calls, use the same token as `hop_collect.php`, configured as `HOP_COLLECT_TOKEN` in `server/api/hop/Config.local.php`:
+
+```bash
+curl -fsS "https://kolej.live/api/station_coordinates_refresh.php?token=VALUE_FROM_HOP_CONFIG" >/dev/null 2>&1
+```
+
 Run the cache warm script from cron:
 
 ```bash
