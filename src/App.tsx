@@ -8,14 +8,17 @@ import {
   CircleOff,
   Clock3,
   ExternalLink,
+  Eye,
   Languages,
   LocateFixed,
   Loader2,
   MapPin,
+  Moon,
   Radio,
   RefreshCw,
   Route,
   Search,
+  Sun,
   TrainFront,
   Wifi,
   X,
@@ -73,12 +76,17 @@ type PendingDetail = {
   loadingKey: string;
 };
 
+type ThemeMode = "light" | "dark";
+
 const today = new Date().toISOString().slice(0, 10);
 const defaultQuery = "";
 const pastBoardLimit = 5;
 const boardDayMs = 24 * 60 * 60 * 1000;
 const initialRoute = routeFromLocation(window.location);
 const initialDate = initialRoute?.date ?? today;
+const themeStorageKey = "kolej.live.theme";
+const accessibilityStorageKey = "kolej.live.accessibility";
+const cookieStorageKey = "kolej.live.cookies";
 
 function getInitialLocale(): Locale {
   const urlLocale = new URLSearchParams(window.location.search).get("lang");
@@ -91,8 +99,23 @@ function getInitialLocale(): Locale {
   return browserLocale ?? defaultLocale;
 }
 
+function getInitialTheme(): ThemeMode {
+  return window.localStorage.getItem(themeStorageKey) === "dark" ? "dark" : "light";
+}
+
+function getInitialAccessibility() {
+  return window.localStorage.getItem(accessibilityStorageKey) === "1";
+}
+
+function getInitialCookieAccepted() {
+  return window.localStorage.getItem(cookieStorageKey) === "accepted";
+}
+
 export default function App() {
   const [locale, setLocale] = useState<Locale>(getInitialLocale);
+  const [theme, setTheme] = useState<ThemeMode>(getInitialTheme);
+  const [accessibility, setAccessibility] = useState(getInitialAccessibility);
+  const [cookieAccepted, setCookieAccepted] = useState(getInitialCookieAccepted);
   const [textMaps, setTextMaps] = useState<TextsByLocale>(texts);
   const [view, setView] = useState<AppView>("status");
   const [query, setQuery] = useState(initialRoute ? queryFromRoute(initialRoute) : defaultQuery);
@@ -121,6 +144,16 @@ export default function App() {
     document.title = pageTitle(station, train, t);
     window.localStorage.setItem(localeStorageKey, locale);
   }, [locale, station, t, train]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    window.localStorage.setItem(themeStorageKey, theme);
+  }, [theme]);
+
+  useEffect(() => {
+    document.documentElement.dataset.accessibility = accessibility ? "true" : "false";
+    window.localStorage.setItem(accessibilityStorageKey, accessibility ? "1" : "0");
+  }, [accessibility]);
 
   useEffect(() => {
     if (train) {
@@ -601,6 +634,13 @@ export default function App() {
         </nav>
         <div className="topbar-actions">
           <LanguageControl locale={locale} setLocale={setLocale} t={t} />
+          <ThemeControls
+            theme={theme}
+            accessibility={accessibility}
+            setTheme={setTheme}
+            setAccessibility={setAccessibility}
+            t={t}
+          />
           <StatsStrip stats={stats} loading={loading === "stats"} t={t} dateTimeLocale={dateTimeLocale} onTrainList={navigateToTrainList} />
         </div>
       </header>
@@ -765,6 +805,16 @@ export default function App() {
           )}
         </section>
       </section>
+
+      {!cookieAccepted && (
+        <CookieNotice
+          t={t}
+          onAccept={() => {
+            window.localStorage.setItem(cookieStorageKey, "accepted");
+            setCookieAccepted(true);
+          }}
+        />
+      )}
     </main>
   );
 }
@@ -790,6 +840,45 @@ function LanguageControl({ locale, setLocale, t }: { locale: Locale; setLocale: 
         ))}
       </select>
     </label>
+  );
+}
+
+function ThemeControls({
+  theme,
+  accessibility,
+  setTheme,
+  setAccessibility,
+  t,
+}: {
+  theme: ThemeMode;
+  accessibility: boolean;
+  setTheme: (theme: ThemeMode) => void;
+  setAccessibility: (value: boolean) => void;
+  t: TranslateFn;
+}) {
+  const dark = theme === "dark";
+
+  return (
+    <div className="theme-controls" aria-label={t("theme.aria")}>
+      <button
+        type="button"
+        className={dark ? "active" : ""}
+        aria-pressed={dark}
+        onClick={() => setTheme(dark ? "light" : "dark")}
+      >
+        {dark ? <Sun size={16} /> : <Moon size={16} />}
+        <span>{dark ? t("theme.light") : t("theme.dark")}</span>
+      </button>
+      <button
+        type="button"
+        className={accessibility ? "active" : ""}
+        aria-pressed={accessibility}
+        onClick={() => setAccessibility(!accessibility)}
+      >
+        <Eye size={16} />
+        <span>{t("theme.accessibility")}</span>
+      </button>
+    </div>
   );
 }
 
@@ -1636,6 +1725,20 @@ function EmptyState({ t }: { t: TranslateFn }) {
       <h2>{t("empty.title")}</h2>
       <p>{t("empty.body")}</p>
     </div>
+  );
+}
+
+function CookieNotice({ t, onAccept }: { t: TranslateFn; onAccept: () => void }) {
+  return (
+    <aside className="cookie-notice" role="dialog" aria-live="polite" aria-label={t("cookies.title")}>
+      <div>
+        <strong>{t("cookies.title")}</strong>
+        <p>{t("cookies.body")}</p>
+      </div>
+      <button type="button" onClick={onAccept}>
+        {t("cookies.accept")}
+      </button>
+    </aside>
   );
 }
 

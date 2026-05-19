@@ -3,9 +3,43 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="kolej.live - status pociagow PKP PLK w czasie rzeczywistym." />
+    <title>Opóźnienia pociągów na żywo, przyjazdy i odjazdy | kolej.live</title>
+    <meta name="description" content="kolej.live pokazuje opóźnienia pociągów na żywo, status kursu, tablice przyjazdów i odjazdów oraz utrudnienia kolejowe na podstawie danych PKP PLK." />
+    <meta name="keywords" content="opóźnienia pociągów, status pociągu, przyjazdy pociągów, odjazdy pociągów, PKP PLK, kolej live, utrudnienia kolejowe" />
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="application-name" content="kolej.live" />
+    <meta name="theme-color" content="#c7222a" />
     <link rel="canonical" href="https://kolej.live/" />
-    <title>kolej.live</title>
+    <meta property="og:locale" content="pl_PL" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="kolej.live" />
+    <meta property="og:title" content="Opóźnienia pociągów na żywo | kolej.live" />
+    <meta property="og:description" content="Sprawdź aktualny status pociągu, opóźnienia, tablice stacji i utrudnienia kolejowe w Polsce." />
+    <meta property="og:url" content="https://kolej.live/" />
+    <meta property="og:image" content="https://kolej.live/kolej-live-logo.svg" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Opóźnienia pociągów na żywo | kolej.live" />
+    <meta name="twitter:description" content="Status pociągów, opóźnienia, przyjazdy, odjazdy i utrudnienia kolejowe na żywo." />
+    <meta name="twitter:image" content="https://kolej.live/kolej-live-logo.svg" />
+    <script>
+      (function () {
+        try {
+          document.documentElement.dataset.theme = localStorage.getItem("kolej.live.theme") === "dark" ? "dark" : "light";
+          document.documentElement.dataset.accessibility = localStorage.getItem("kolej.live.accessibility") === "1" ? "true" : "false";
+        } catch (error) {
+          document.documentElement.dataset.theme = "light";
+        }
+      })();
+    </script>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-FDKKPY1RE1"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-FDKKPY1RE1');
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -3,8 +3,15 @@
 declare(strict_types=1);
 
 return [
-    'meta.title' => 'kolej.live',
+    'meta.title' => 'Opóźnienia pociągów na żywo | kolej.live',
     'language.label' => 'Język',
+    'theme.aria' => 'Wygląd strony',
+    'theme.dark' => 'Ciemny',
+    'theme.light' => 'Jasny',
+    'theme.accessibility' => 'Dostępność',
+    'cookies.title' => 'Prywatność i cookies',
+    'cookies.body' => 'Używamy plików cookies i Google Analytics do pomiaru odwiedzin oraz poprawy działania kolej.live.',
+    'cookies.accept' => 'Akceptuję',
     'nav.aria' => 'Sekcje',
     'nav.status' => 'Status pociągu',
     'nav.arrivals' => 'Przyjazdy',

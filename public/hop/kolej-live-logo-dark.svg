@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 64" role="img" aria-label="kolej.live">
+  <defs>
+    <filter id="logo-shadow" x="-20%" y="-20%" width="140%" height="150%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="12" stdDeviation="8" flood-color="#c7222a" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <rect x="2" y="8" width="48" height="48" rx="10" fill="#c7222a" filter="url(#logo-shadow)"/>
+  <path d="M18 19h16c4.4 0 8 3.6 8 8v13c0 3.3-2.7 6-6 6H16c-3.3 0-6-2.7-6-6V27c0-4.4 3.6-8 8-8Z" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M17 16h18M18 29h16M18 39h16M17 51l5-7M35 51l-5-7" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="18" cy="34" r="2.5" fill="#fff"/>
+  <circle cx="34" cy="34" r="2.5" fill="#fff"/>
+  <text x="64" y="41" fill="#f5f7fb" font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="25" font-weight="800" letter-spacing="0">kolej.live</text>
+</svg>

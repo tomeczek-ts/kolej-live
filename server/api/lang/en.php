@@ -3,8 +3,15 @@
 declare(strict_types=1);
 
 return [
-    'meta.title' => 'kolej.live',
+    'meta.title' => 'Live train delays and station boards | kolej.live',
     'language.label' => 'Language',
+    'theme.aria' => 'Page appearance',
+    'theme.dark' => 'Dark',
+    'theme.light' => 'Light',
+    'theme.accessibility' => 'Accessibility',
+    'cookies.title' => 'Privacy and cookies',
+    'cookies.body' => 'We use cookies and Google Analytics to measure visits and improve kolej.live.',
+    'cookies.accept' => 'Accept',
     'nav.aria' => 'Sections',
     'nav.status' => 'Train status',
     'nav.arrivals' => 'Arrivals',

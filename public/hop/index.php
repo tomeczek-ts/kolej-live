@@ -385,6 +385,7 @@ function hop_page_top_delay_services(PDO $pdo, string $period): array
          FROM (
            SELECT
              obs.train_run_id,
+             obs.station_id,
              CASE
                WHEN effective_arrival_delay IS NULL AND effective_departure_delay IS NULL THEN NULL
                WHEN effective_arrival_delay IS NULL THEN effective_departure_delay
@@ -395,6 +396,7 @@ function hop_page_top_delay_services(PDO $pdo, string $period): array
            FROM (
              SELECT
                obs.train_run_id,
+               obs.station_id,
                CASE
                  WHEN obs.arrival_delay_minutes IS NULL AND obs.actual_arrival IS NOT NULL THEN 0
                  ELSE obs.arrival_delay_minutes
@@ -405,10 +407,13 @@ function hop_page_top_delay_services(PDO $pdo, string $period): array
                END AS effective_departure_delay
              FROM hop_station_observations obs
              WHERE $dateWhere
+               AND obs.is_cancelled = 0
            ) obs
          ) d
          JOIN hop_train_runs tr ON tr.id = d.train_run_id
          WHERE (tr.label REGEXP '^(EIC|EIP|IC|TLK)([[:space:]]|$)' OR tr.category IN ('EIC', 'EIP', 'IC', 'TLK'))
+           AND tr.destination_station_id IS NOT NULL
+           AND d.station_id = tr.destination_station_id
          GROUP BY tr.service_key
          HAVING max_delay IS NOT NULL
          ORDER BY max_delay DESC, label ASC
@@ -711,6 +716,25 @@ $pageJsonLd = hop_page_json_ld($pageMeta, $selectedService);
   <meta name="twitter:title" content="<?= e($pageMeta['title']) ?>">
   <meta name="twitter:description" content="<?= e($pageMeta['description']) ?>">
   <meta name="twitter:image" content="<?= e($pageMeta['image']) ?>">
+  <script>
+    (function () {
+      try {
+        document.documentElement.dataset.theme = localStorage.getItem('kolej.live.theme') === 'dark' ? 'dark' : 'light';
+        document.documentElement.dataset.accessibility = localStorage.getItem('kolej.live.accessibility') === '1' ? 'true' : 'false';
+      } catch (error) {
+        document.documentElement.dataset.theme = 'light';
+      }
+    })();
+  </script>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-FDKKPY1RE1"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-FDKKPY1RE1');
+  </script>
   <script type="application/ld+json">
 <?= $pageJsonLd ?>
   </script>
@@ -718,32 +742,70 @@ $pageJsonLd = hop_page_json_ld($pageMeta, $selectedService);
     :root {
       color-scheme: light;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --bg: #ffffff;
       --ink: #111317;
       --muted: #667085;
       --line: #dce1e6;
       --soft: #f6f7f8;
+      --surface: #ffffff;
+      --surface-muted: #f9fafb;
       --red: #c7222a;
       --green: #087a54;
       --amber: #b7791f;
+      --shadow: 0 18px 48px rgba(22, 30, 42, .08);
+      --focus: 0 0 0 3px rgba(199, 34, 42, .22);
+    }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #0d1117;
+      --ink: #f5f7fb;
+      --muted: #a8b3c2;
+      --line: #2c3644;
+      --soft: #151b23;
+      --surface: #111821;
+      --surface-muted: #151d28;
+      --red: #ff5b66;
+      --green: #55d39a;
+      --amber: #ffd166;
+      --shadow: 0 22px 64px rgba(0, 0, 0, .34);
+      --focus: 0 0 0 3px rgba(255, 91, 102, .32);
+    }
+    :root[data-accessibility="true"] {
+      --muted: #303846;
+      --line: #7b8797;
+      --red: #a8111d;
+      --green: #006b45;
+      --focus: 0 0 0 4px rgba(168, 17, 29, .32);
+    }
+    :root[data-theme="dark"][data-accessibility="true"] {
+      --muted: #d1d7e0;
+      --line: #6d7a8c;
+      --red: #ff7b84;
+      --green: #72e7ae;
     }
     * { box-sizing: border-box; }
-    body { margin: 0; color: var(--ink); background: #fff; }
+    body { margin: 0; color: var(--ink); background: linear-gradient(180deg, var(--bg), var(--bg) 52%, var(--soft)); }
     .shell { width: min(1280px, calc(100% - 28px)); margin: 0 auto; padding: 24px 0 40px; }
-    .top { display: flex; justify-content: space-between; gap: 16px; align-items: center; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
-    .brand { display: flex; align-items: center; gap: 14px; font-size: 22px; font-weight: 820; }
+    .top { display: flex; justify-content: space-between; gap: 16px; align-items: center; padding: 10px 0 18px; border-bottom: 1px solid var(--line); }
+    .brand { display: flex; align-items: center; gap: 14px; color: var(--ink); text-decoration: none; }
     .brand-logo { width: 196px; height: auto; display: block; }
-    .brand span { max-width: 360px; line-height: 1.15; }
+    :root[data-theme="dark"] .brand-logo { content: url("/kolej-live-logo-dark.svg"); }
+    .brand span { max-width: 360px; font-size: clamp(15px, 2vw, 18px); line-height: 1.15; font-weight: 760; letter-spacing: 0; }
+    .top-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; flex-wrap: wrap; }
     .parent-service { display: grid; justify-items: end; gap: 2px; color: var(--muted); font-size: 12px; font-weight: 720; }
     .parent-service a { color: var(--ink); text-decoration: none; font-size: 16px; font-weight: 820; }
     .parent-service a:hover { color: var(--red); }
+    .theme-controls { display: inline-flex; gap: 6px; padding: 3px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+    .theme-controls button { min-height: 32px; display: inline-flex; align-items: center; gap: 6px; padding: 0 9px; color: var(--muted); background: transparent; border-radius: 6px; font-size: 12px; font-weight: 760; }
+    .theme-controls button.active { color: #fff; background: var(--red); }
     .hero { display: grid; gap: 10px; padding: 24px 0 18px; }
     h1 { margin: 0; font-size: clamp(28px, 4vw, 44px); line-height: 1; letter-spacing: 0; }
     p { margin: 0; color: var(--muted); line-height: 1.5; }
-    .panel { padding: 16px; border: 1px solid var(--line); border-radius: 8px; background: #fff; box-shadow: 0 18px 48px rgba(22, 30, 42, .08); }
+    .panel { padding: 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: var(--shadow); }
     .controls { display: grid; grid-template-columns: minmax(260px, 1fr); gap: 12px; align-items: end; margin-bottom: 14px; }
     label { display: grid; gap: 6px; color: var(--muted); font-size: 12px; font-weight: 800; text-transform: uppercase; }
     input, button { font: inherit; }
-    .service-search { width: 100%; min-height: 42px; padding: 0 12px; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 8px; font-weight: 700; }
+    .service-search { width: 100%; min-height: 42px; padding: 0 12px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; font-weight: 700; }
     .service-search:focus { outline: 2px solid rgba(199, 34, 42, .18); border-color: var(--red); }
     button { min-height: 42px; padding: 0 14px; border: 0; border-radius: 8px; color: #fff; background: var(--red); cursor: pointer; font-weight: 780; }
     .metrics { display: grid; grid-template-columns: repeat(5, minmax(120px, 1fr)); gap: 8px; margin: 12px 0 16px; }
@@ -754,7 +816,7 @@ $pageJsonLd = hop_page_json_ld($pageMeta, $selectedService);
     table { width: 100%; min-width: 780px; border-collapse: collapse; }
     th, td { padding: 10px 12px; border-bottom: 1px solid var(--line); text-align: center; white-space: nowrap; }
     th { position: sticky; top: 0; z-index: 1; background: var(--soft); color: #3b424d; font-size: 12px; text-transform: uppercase; }
-    th:first-child, td:first-child { position: sticky; left: 0; z-index: 2; text-align: left; background: #fff; }
+    th:first-child, td:first-child { position: sticky; left: 0; z-index: 2; text-align: left; background: var(--surface); }
     th:first-child { background: var(--soft); z-index: 3; }
     tbody tr > td { border-bottom: 2px solid #c5ccd5; }
     .station { width: 220px; min-width: 220px; max-width: 220px; font-weight: 760; white-space: normal; line-height: 1.25; }
@@ -764,17 +826,17 @@ $pageJsonLd = hop_page_json_ld($pageMeta, $selectedService);
     .stop-line:last-child { border-bottom: 0; }
     .stop-kind { color: var(--ink); font-size: 13px; text-align: right; padding-right: 8px; }
     .cell { display: inline-flex; min-width: 76px; min-height: 22px; align-items: center; justify-content: center; border-radius: 6px; font-weight: 820; }
-    .cell.ok { color: var(--green); background: #e7f6ef; }
-    .cell.late { color: #7a4d00; background: #fff4df; }
-    .cell.bad { color: #94191f; background: #fff1f2; }
+    .cell.ok { color: var(--green); background: color-mix(in srgb, var(--green) 14%, var(--surface)); }
+    .cell.late { color: var(--amber); background: color-mix(in srgb, var(--amber) 15%, var(--surface)); }
+    .cell.bad { color: var(--red); background: color-mix(in srgb, var(--red) 12%, var(--surface)); }
     .cell.critical { color: #fff; background: #7f1d1d; }
-    .cell.cancelled { color: #94191f; background: #fff1f2; }
-    .cell.unknown { color: #596273; background: #eef1f4; }
+    .cell.cancelled { color: var(--red); background: color-mix(in srgb, var(--red) 12%, var(--surface)); }
+    .cell.unknown { color: var(--muted); background: var(--soft); }
     .cell.empty { background: transparent; }
     .hint, .error { padding: 14px; border-radius: 8px; line-height: 1.45; }
     .hint { color: #475467; background: var(--soft); }
-    .error { color: #94191f; background: #fff1f2; border: 1px solid #f1b7bb; }
-    .popular-panel, .delay-panel { padding: 16px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+    .error { color: var(--red); background: color-mix(in srgb, var(--red) 10%, var(--surface)); border: 1px solid color-mix(in srgb, var(--red) 40%, var(--line)); }
+    .popular-panel, .delay-panel { padding: 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: var(--shadow); }
     .popular-panel { margin-top: 18px; }
     .delay-panels { display: grid; grid-template-columns: 1fr; gap: 20px; margin-top: 18px; }
     .popular-panel h2, .delay-panel h2 { margin: 0 0 12px; font-size: 18px; line-height: 1.2; }
@@ -783,26 +845,43 @@ $pageJsonLd = hop_page_json_ld($pageMeta, $selectedService);
     .service-card:hover { border-color: rgba(199, 34, 42, .45); box-shadow: 0 8px 22px rgba(22, 30, 42, .08); }
     .service-card-name { line-height: 1.25; }
     .service-card-value { color: var(--red); font-weight: 860; white-space: nowrap; }
+    .cookie-notice { position: fixed; z-index: 50; right: 18px; bottom: 18px; width: min(460px, calc(100% - 36px)); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 14px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); }
+    .cookie-notice strong { display: block; margin-bottom: 3px; font-size: 14px; }
+    .cookie-notice p { margin: 0; font-size: 13px; line-height: 1.35; }
+    .cookie-notice button { white-space: nowrap; }
+    .cookie-notice[hidden] { display: none; }
+    button:focus-visible, a:focus-visible, input:focus-visible { outline: 0; box-shadow: var(--focus); }
+    :root[data-accessibility="true"] body { font-size: 18px; }
+    :root[data-accessibility="true"] button,
+    :root[data-accessibility="true"] .service-search { min-height: 46px; }
     @media (max-width: 820px) {
       .top, .controls { grid-template-columns: 1fr; align-items: stretch; }
       .top { display: grid; }
+      .top-actions { justify-content: start; }
       .brand-logo { width: 154px; }
       .metrics { grid-template-columns: 1fr 1fr; }
       .delay-panels { grid-template-columns: 1fr; }
       th.station, td.station { width: 136px; min-width: 136px; max-width: 136px; padding: 8px; font-size: 13px; }
+      .cookie-notice { right: 10px; bottom: 10px; left: 10px; width: auto; grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
   <main class="shell">
     <header class="top">
-      <div class="brand">
+      <a class="brand" href="https://hop.kolej.live/" aria-label="<?= e(hop_t('hop.brand.name')) ?>">
         <img class="brand-logo" src="/kolej-live-logo.svg" alt="<?= e(hop_t('hop.logo_alt')) ?>">
         <span><?= e(hop_t('hop.brand.name')) ?></span>
-      </div>
-      <div class="parent-service">
-        <span><?= e(hop_t('hop.parent_service.note')) ?></span>
-        <a href="https://kolej.live/"><?= e(hop_t('hop.parent_service.link')) ?></a>
+      </a>
+      <div class="top-actions">
+        <div class="theme-controls" aria-label="<?= e(hop_t('hop.theme.aria')) ?>">
+          <button type="button" data-theme-toggle><?= e(hop_t('hop.theme.dark')) ?></button>
+          <button type="button" data-accessibility-toggle><?= e(hop_t('hop.theme.accessibility')) ?></button>
+        </div>
+        <div class="parent-service">
+          <span><?= e(hop_t('hop.parent_service.note')) ?></span>
+          <a href="https://kolej.live/"><?= e(hop_t('hop.parent_service.link')) ?></a>
+        </div>
       </div>
     </header>
 
@@ -976,9 +1055,84 @@ $pageJsonLd = hop_page_json_ld($pageMeta, $selectedService);
         </div>
       </section>
     <?php endif; ?>
+    <aside class="cookie-notice" data-cookie-notice role="dialog" aria-live="polite" aria-label="<?= e(hop_t('hop.cookies.title')) ?>">
+      <div>
+        <strong><?= e(hop_t('hop.cookies.title')) ?></strong>
+        <p><?= e(hop_t('hop.cookies.body')) ?></p>
+      </div>
+      <button type="button" data-cookie-accept><?= e(hop_t('hop.cookies.accept')) ?></button>
+    </aside>
   </main>
   <script>
     (function () {
+      var themeToggle = document.querySelector('[data-theme-toggle]');
+      var accessibilityToggle = document.querySelector('[data-accessibility-toggle]');
+      var cookieNotice = document.querySelector('[data-cookie-notice]');
+      var cookieAccept = document.querySelector('[data-cookie-accept]');
+      var darkLabel = <?= json_encode(hop_t('hop.theme.dark'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '""' ?>;
+      var lightLabel = <?= json_encode(hop_t('hop.theme.light'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '""' ?>;
+
+      function readStorage(key) {
+        try {
+          return localStorage.getItem(key);
+        } catch (error) {
+          return null;
+        }
+      }
+
+      function writeStorage(key, value) {
+        try {
+          localStorage.setItem(key, value);
+        } catch (error) {
+          return;
+        }
+      }
+
+      function syncVisualControls() {
+        var dark = document.documentElement.dataset.theme === 'dark';
+        var accessible = document.documentElement.dataset.accessibility === 'true';
+        if (themeToggle) {
+          themeToggle.textContent = dark ? lightLabel : darkLabel;
+          themeToggle.classList.toggle('active', dark);
+          themeToggle.setAttribute('aria-pressed', dark ? 'true' : 'false');
+        }
+        if (accessibilityToggle) {
+          accessibilityToggle.classList.toggle('active', accessible);
+          accessibilityToggle.setAttribute('aria-pressed', accessible ? 'true' : 'false');
+        }
+      }
+
+      if (themeToggle) {
+        themeToggle.addEventListener('click', function () {
+          var next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+          document.documentElement.dataset.theme = next;
+          writeStorage('kolej.live.theme', next);
+          syncVisualControls();
+        });
+      }
+
+      if (accessibilityToggle) {
+        accessibilityToggle.addEventListener('click', function () {
+          var enabled = document.documentElement.dataset.accessibility !== 'true';
+          document.documentElement.dataset.accessibility = enabled ? 'true' : 'false';
+          writeStorage('kolej.live.accessibility', enabled ? '1' : '0');
+          syncVisualControls();
+        });
+      }
+
+      if (cookieNotice && readStorage('kolej.live.cookies') === 'accepted') {
+        cookieNotice.hidden = true;
+      }
+
+      if (cookieAccept && cookieNotice) {
+        cookieAccept.addEventListener('click', function () {
+          writeStorage('kolej.live.cookies', 'accepted');
+          cookieNotice.hidden = true;
+        });
+      }
+
+      syncVisualControls();
+
       var form = document.querySelector('[data-service-form]');
       if (!form) {
         return;
