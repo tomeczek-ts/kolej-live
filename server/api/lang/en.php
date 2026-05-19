@@ -17,6 +17,7 @@ return [
     'search.placeholder' => 'Search train, station, city, carrier',
     'search.defaultPlaceholder' => 'Warsaw Central',
     'search.submit' => 'Search',
+    'search.clear' => 'Clear search',
     'search.mode.aria' => 'Search mode',
     'search.mode.auto' => 'Auto',
     'search.mode.station' => 'Station',

@@ -1,5 +1,5 @@
 export type SearchMode = "auto" | "station" | "train";
-export type BoardKind = "all" | "departure" | "arrival";
+export type BoardKind = "departure" | "arrival";
 export type AppView = "status" | "arrivals" | "departures" | "route" | "disruptions" | "trains";
 export type SuggestionType = "station" | "train" | "carrier" | "category" | "city";
 

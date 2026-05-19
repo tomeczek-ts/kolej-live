@@ -16,6 +16,7 @@ import {
   Search,
   TrainFront,
   Wifi,
+  X,
 } from "lucide-react";
 import type { FormEvent, MouseEvent, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
@@ -65,7 +66,7 @@ import type {
 
 const today = new Date().toISOString().slice(0, 10);
 const defaultQuery = "";
-const pastBoardLimit = 10;
+const pastBoardLimit = 5;
 const boardDayMs = 24 * 60 * 60 * 1000;
 const initialRoute = routeFromLocation(window.location);
 const initialDate = initialRoute?.date ?? today;
@@ -98,7 +99,7 @@ export default function App() {
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [suggestionLoading, setSuggestionLoading] = useState(false);
-  const [boardKind, setBoardKind] = useState<BoardKind>("all");
+  const [boardKind, setBoardKind] = useState<BoardKind>("departure");
   const [loading, setLoading] = useState<"search" | "station" | "train" | "trainList" | "stats" | "disruptions" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const t = useMemo<TranslateFn>(() => (key, values) => translate(locale, key, values, textMaps), [locale, textMaps]);
@@ -245,7 +246,7 @@ export default function App() {
     setView(nextView);
 
     if (nextView === "status") {
-      setBoardKind("all");
+      setBoardKind("departure");
     } else if (nextView === "arrivals") {
       setBoardKind("arrival");
     } else if (nextView === "departures") {
@@ -257,6 +258,26 @@ export default function App() {
     } else if (nextView === "trains") {
       setMode("train");
     }
+  }
+
+  function selectBoardKind(kind: BoardKind) {
+    setBoardKind(kind);
+    setView(kind === "arrival" ? "arrivals" : "departures");
+  }
+
+  function clearSearchForm() {
+    setQuery(defaultQuery);
+    setMode("auto");
+    setSearch(null);
+    setStation(null);
+    setTrain(null);
+    setTrainList(null);
+    setError(null);
+    setSuggestions(popularStationSuggestions);
+    setSuggestionsOpen(false);
+    setBoardKind("departure");
+    setView("status");
+    writeBrowserUrl("/", "push");
   }
 
   async function refreshSeoLinks() {
@@ -351,9 +372,9 @@ export default function App() {
         writeBrowserUrl(searchHref(value, searchMode), options.historyMode ?? "push");
       }
 
-      if (result.stations[0] && searchMode !== "train") {
+      if (result.stations.length === 1 && searchMode !== "train") {
         await loadStation(result.stations[0], false, { historyMode: options.historyMode });
-      } else if (result.trains[0]) {
+      } else if (result.stations.length === 0 && result.trains[0]) {
         const trainMatch = preferredTrain(result.trains, options.preferTrainSlug);
         await loadTrain(trainMatch, false, { historyMode: options.historyMode });
       }
@@ -368,11 +389,11 @@ export default function App() {
     setError(null);
     setTrain(null);
     setTrainList(null);
-    if (view === "route") {
-      setView("status");
-    }
-    if (view === "status") {
-      setBoardKind("all");
+    if (view === "arrivals") {
+      setBoardKind("arrival");
+    } else {
+      setView("departures");
+      setBoardKind("departure");
     }
     if (showLoading) setLoading("station");
 
@@ -540,6 +561,18 @@ export default function App() {
               aria-label={t("search.placeholder")}
               autoComplete="off"
             />
+            {query.length > 0 && (
+              <button
+                className="icon-button clear-search-button"
+                type="button"
+                aria-label={t("search.clear")}
+                title={t("search.clear")}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={clearSearchForm}
+              >
+                <X size={17} />
+              </button>
+            )}
             <button className="icon-button primary" type="submit" aria-label={t("search.submit")} disabled={loading === "search"}>
               {loading === "search" ? <Loader2 className="spin" size={18} /> : <ChevronRight size={19} />}
             </button>
@@ -641,8 +674,8 @@ export default function App() {
             <StationBoard
               station={station}
               boardKind={view === "arrivals" ? "arrival" : view === "departures" ? "departure" : boardKind}
-              setBoardKind={setBoardKind}
-              showFilters={view === "status"}
+              setBoardKind={selectBoardKind}
+              showFilters
               loading={loading === "station"}
               onTrain={loadTrain}
               t={t}
@@ -970,7 +1003,7 @@ function StationBoard({
     const dayEnd = dayStart + boardDayMs;
     const splitTime = Math.min(Math.max(currentTime, dayStart), dayEnd);
     const timedItems = station.board
-      .filter((item) => boardKind === "all" || item.kind === boardKind)
+      .filter((item) => item.kind === boardKind)
       .map((item) => ({ item, boardTimestamp: boardItemTimestamp(item) }))
       .filter((entry): entry is { item: BoardItem; boardTimestamp: number } => {
         return entry.boardTimestamp !== null && entry.boardTimestamp >= dayStart && entry.boardTimestamp < dayEnd;
@@ -998,9 +1031,6 @@ function StationBoard({
         </div>
         {showFilters && (
           <div className="tabbar" aria-label={t("board.aria")}>
-            <button className={boardKind === "all" ? "active" : ""} onClick={() => setBoardKind("all")} type="button">
-              {t("board.all")}
-            </button>
             <button className={boardKind === "departure" ? "active" : ""} onClick={() => setBoardKind("departure")} type="button">
               {t("board.departures")}
             </button>

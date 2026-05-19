@@ -383,6 +383,24 @@ a {
   background: var(--red);
 }
 
+.icon-button.primary svg {
+  color: currentColor;
+}
+
+.clear-search-button {
+  color: var(--muted);
+  background: transparent;
+}
+
+.clear-search-button:hover {
+  color: var(--ink);
+  background: var(--soft-2);
+}
+
+.clear-search-button svg {
+  color: currentColor;
+}
+
 .icon-button:disabled,
 .ghost-button:disabled {
   opacity: 0.55;

@@ -17,6 +17,7 @@ return [
     'search.placeholder' => 'Szukaj pociągu, stacji, miasta, przewoźnika',
     'search.defaultPlaceholder' => 'Warszawa Centralna',
     'search.submit' => 'Szukaj',
+    'search.clear' => 'Wyczyść wyszukiwanie',
     'search.mode.aria' => 'Tryb wyszukiwania',
     'search.mode.auto' => 'Auto',
     'search.mode.station' => 'Stacja',
