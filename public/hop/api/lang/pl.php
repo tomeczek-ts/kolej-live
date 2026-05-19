@@ -3,13 +3,19 @@
 declare(strict_types=1);
 
 return [
-    'hop.meta.title' => 'kolej.live hop',
+    'hop.meta.site_name' => 'HOP - Historyczne Opóźnienia Pociągów',
+    'hop.meta.title' => 'HOP - Historyczne Opóźnienia Pociągów | hop.kolej.live',
+    'hop.meta.description' => 'HOP (Historyczne Opóźnienia Pociągów) pokazuje zapisane opóźnienia pociągów na stacjach, historię kursów i największe opóźnienia dzień po dniu.',
+    'hop.meta.keywords' => 'Historyczne Opóźnienia Pociągów, HOP, opóźnienia pociągów, historia opóźnień PKP, opóźnienia na stacjach, kolej live',
+    'hop.meta.service_title' => 'Historyczne opóźnienia pociągu {service} | HOP',
+    'hop.meta.service_description' => 'Sprawdź historyczne opóźnienia pociągu {service}: opóźnienia na każdej stacji, obserwacje dzień po dniu, średnie i największe opóźnienie.',
+    'hop.meta.service_keywords' => 'historyczne opóźnienia pociągu {service}, HOP {service}, opóźnienia {service}, historia opóźnień pociągów, opóźnienia PKP',
     'hop.logo_alt' => 'Logo kolej.live',
-    'hop.brand.name' => 'Historyczne opóźnienia pociągów',
+    'hop.brand.name' => 'HOP - Historyczne Opóźnienia Pociągów',
     'hop.parent_service.note' => 'Część serwisu kolej.live',
     'hop.parent_service.link' => 'Strona główna kolej.live',
-    'hop.hero.title' => 'Czy mój pociąg bywa spóźniony?',
-    'hop.hero.body' => 'Sprawdź, czy twój pociąg regularnie się spóźnia. Wpisz numer, nazwę lub relację swojego pociągu, a zobaczysz jego historyczne opóźnienia dzień po dniu.',
+    'hop.hero.title' => 'HOP - Historyczne Opóźnienia Pociągów',
+    'hop.hero.body' => 'Sprawdź historyczne opóźnienia pociągów dzień po dniu. Wpisz numer, nazwę lub relację pociągu, aby zobaczyć opóźnienia na każdej stacji.',
     'hop.service.relation_separator' => ' -> ',
     'hop.service.parts_separator' => ' · ',
     'hop.search.label' => 'Pociąg',

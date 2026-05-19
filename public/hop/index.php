@@ -124,6 +124,117 @@ function hop_page_service_url(array $service): string
     return hop_page_canonical_url($service);
 }
 
+function hop_page_meta(?array $service, array $summary): array
+{
+    $canonical = hop_page_canonical_url($service);
+    $image = 'https://hop.kolej.live/kolej-live-logo.svg';
+    $siteName = hop_t('hop.meta.site_name');
+    $serviceLabel = $service !== null ? hop_page_service_label($service) : null;
+
+    if ($serviceLabel !== null) {
+        $title = hop_t('hop.meta.service_title', ['service' => $serviceLabel]);
+        $description = hop_t('hop.meta.service_description', ['service' => $serviceLabel]);
+        $keywords = hop_t('hop.meta.service_keywords', ['service' => $serviceLabel]);
+        $type = 'article';
+    } else {
+        $title = hop_t('hop.meta.title');
+        $description = hop_t('hop.meta.description');
+        $keywords = hop_t('hop.meta.keywords');
+        $type = 'website';
+    }
+
+    return [
+        'title' => $title,
+        'description' => $description,
+        'keywords' => $keywords,
+        'canonical' => $canonical,
+        'image' => $image,
+        'siteName' => $siteName,
+        'type' => $type,
+        'serviceLabel' => $serviceLabel,
+        'daysCount' => (int) ($summary['days_count'] ?? 0),
+        'observationsCount' => (int) ($summary['observations_count'] ?? 0),
+        'avgDelay' => $summary['avg_delay'] ?? null,
+        'maxDelay' => $summary['max_delay'] ?? null,
+    ];
+}
+
+function hop_page_json_ld(array $meta, ?array $service): string
+{
+    $graph = [
+        [
+            '@type' => 'WebSite',
+            '@id' => 'https://hop.kolej.live/#website',
+            'url' => 'https://hop.kolej.live/',
+            'name' => $meta['siteName'],
+            'description' => hop_t('hop.meta.description'),
+            'inLanguage' => 'pl-PL',
+            'publisher' => [
+                '@type' => 'Organization',
+                '@id' => 'https://kolej.live/#organization',
+                'name' => 'kolej.live',
+                'url' => 'https://kolej.live/',
+                'logo' => [
+                    '@type' => 'ImageObject',
+                    'url' => $meta['image'],
+                ],
+            ],
+            'potentialAction' => [
+                '@type' => 'SearchAction',
+                'target' => 'https://hop.kolej.live/?historia_opoznien_query={search_term_string}',
+                'query-input' => 'required name=search_term_string',
+            ],
+        ],
+        [
+            '@type' => $service !== null ? 'Dataset' : 'WebPage',
+            '@id' => $meta['canonical'] . '#webpage',
+            'url' => $meta['canonical'],
+            'name' => $meta['title'],
+            'description' => $meta['description'],
+            'isPartOf' => ['@id' => 'https://hop.kolej.live/#website'],
+            'inLanguage' => 'pl-PL',
+            'about' => [
+                '@type' => 'Thing',
+                'name' => 'Historyczne Opóźnienia Pociągów',
+            ],
+        ],
+    ];
+
+    if ($service !== null) {
+        $graph[1]['keywords'] = $meta['keywords'];
+        $graph[1]['measurementTechnique'] = 'Daily train delay observations by station';
+        $graph[1]['variableMeasured'] = ['arrival_delay_minutes', 'departure_delay_minutes', 'is_cancelled'];
+        if ($meta['daysCount'] > 0) {
+            $graph[1]['temporalCoverage'] = 'P' . $meta['daysCount'] . 'D';
+        }
+        $graph[] = [
+            '@type' => 'BreadcrumbList',
+            '@id' => $meta['canonical'] . '#breadcrumbs',
+            'itemListElement' => [
+                [
+                    '@type' => 'ListItem',
+                    'position' => 1,
+                    'name' => 'HOP',
+                    'item' => 'https://hop.kolej.live/',
+                ],
+                [
+                    '@type' => 'ListItem',
+                    'position' => 2,
+                    'name' => $meta['serviceLabel'],
+                    'item' => $meta['canonical'],
+                ],
+            ],
+        ];
+    }
+
+    $json = json_encode(
+        ['@context' => 'https://schema.org', '@graph' => $graph],
+        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+    );
+
+    return $json !== false ? $json : '{}';
+}
+
 function hop_page_ensure_search_table(PDO $pdo): void
 {
     try {
@@ -534,14 +645,39 @@ try {
 } catch (Throwable $exception) {
     $error = $exception->getMessage();
 }
+
+$pageMeta = hop_page_meta($selectedService, $summary);
+$pageJsonLd = hop_page_json_ld($pageMeta, $selectedService);
 ?>
 <!doctype html>
 <html lang="<?= e($pageLocale) ?>">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title><?= e(hop_t('hop.meta.title')) ?></title>
-  <link rel="canonical" href="<?= e(hop_page_canonical_url($selectedService)) ?>">
+  <title><?= e($pageMeta['title']) ?></title>
+  <meta name="description" content="<?= e($pageMeta['description']) ?>">
+  <meta name="keywords" content="<?= e($pageMeta['keywords']) ?>">
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+  <meta name="googlebot" content="index, follow">
+  <meta name="application-name" content="HOP">
+  <meta name="theme-color" content="#c7222a">
+  <link rel="canonical" href="<?= e($pageMeta['canonical']) ?>">
+  <link rel="alternate" hreflang="pl-PL" href="<?= e($pageMeta['canonical']) ?>">
+  <link rel="alternate" hreflang="x-default" href="<?= e($pageMeta['canonical']) ?>">
+  <meta property="og:locale" content="pl_PL">
+  <meta property="og:type" content="<?= e($pageMeta['type']) ?>">
+  <meta property="og:site_name" content="<?= e($pageMeta['siteName']) ?>">
+  <meta property="og:title" content="<?= e($pageMeta['title']) ?>">
+  <meta property="og:description" content="<?= e($pageMeta['description']) ?>">
+  <meta property="og:url" content="<?= e($pageMeta['canonical']) ?>">
+  <meta property="og:image" content="<?= e($pageMeta['image']) ?>">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="<?= e($pageMeta['title']) ?>">
+  <meta name="twitter:description" content="<?= e($pageMeta['description']) ?>">
+  <meta name="twitter:image" content="<?= e($pageMeta['image']) ?>">
+  <script type="application/ld+json">
+<?= $pageJsonLd ?>
+  </script>
   <style>
     :root {
       color-scheme: light;

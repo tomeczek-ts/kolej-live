@@ -3,7 +3,13 @@
 declare(strict_types=1);
 
 return [
-    'hop.meta.title' => 'kolej.live hop',
+    'hop.meta.site_name' => 'HOP - Historic Train Delays',
+    'hop.meta.title' => 'HOP - Historic Train Delays | hop.kolej.live',
+    'hop.meta.description' => 'HOP shows historic train delays on stations, daily observations, route delay history, and the largest recorded train delays.',
+    'hop.meta.keywords' => 'historic train delays, HOP, train delay history, station delays, rail delays, kolej live',
+    'hop.meta.service_title' => 'Historic train delays for {service} | HOP',
+    'hop.meta.service_description' => 'Check historic train delays for {service}: station-by-station delays, daily observations, average delay, and the largest recorded delay.',
+    'hop.meta.service_keywords' => 'historic train delays {service}, HOP {service}, train delay history {service}, station delays, rail delays',
     'hop.logo_alt' => 'kolej.live logo',
     'hop.brand.name' => 'Train Delay History',
     'hop.parent_service.note' => 'Part of kolej.live',
