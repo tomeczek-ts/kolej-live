@@ -254,6 +254,27 @@ function hop_page_ensure_search_table(PDO $pdo): void
     }
 }
 
+function hop_page_ensure_daily_random_table(PDO $pdo): void
+{
+    try {
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS hop_daily_random_services (
+              selection_date DATE NOT NULL,
+              observation_date DATE NOT NULL,
+              position SMALLINT UNSIGNED NOT NULL,
+              service_key CHAR(40) NOT NULL,
+              generated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              PRIMARY KEY (selection_date, position),
+              UNIQUE KEY uq_hop_daily_random_service (selection_date, service_key),
+              KEY idx_hop_daily_random_observation (observation_date),
+              KEY idx_hop_daily_random_service (service_key)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+    } catch (Throwable $exception) {
+        return;
+    }
+}
+
 function hop_page_record_search(PDO $pdo, string $serviceKey): void
 {
     try {
@@ -303,31 +324,45 @@ function hop_page_popular_services(PDO $pdo): array
     $excluded = array_column($services, 'service_key');
     $excludeSql = '';
     if ($excluded !== []) {
-        $excludeSql = 'AND tr.service_key NOT IN (' . implode(',', array_fill(0, count($excluded), '?')) . ')';
+        $excludeSql = 'AND d.service_key NOT IN (' . implode(',', array_fill(0, count($excluded), '?')) . ')';
     }
 
-    $fallbackStmt = $pdo->prepare(
-        "SELECT
-           tr.service_key,
-           MAX(tr.label) AS label,
-           MAX(tr.train_number) AS train_number,
-           MAX(tr.category) AS category,
-           MAX(tr.origin_name) AS origin_name,
-           MAX(tr.destination_name) AS destination_name,
-           COUNT(DISTINCT tr.operating_date) AS days_count,
-           MAX(tr.operating_date) AS last_date
-         FROM hop_train_runs tr
-         JOIN hop_station_observations obs ON obs.train_run_id = tr.id
-         WHERE obs.observation_date = CURDATE() - INTERVAL 1 DAY
-           AND (tr.label REGEXP '^(EIC|EIP|IC|TLK)([[:space:]]|$)' OR tr.category IN ('EIC', 'EIP', 'IC', 'TLK'))
-           $excludeSql
-         GROUP BY tr.service_key
-         ORDER BY RAND()
-         LIMIT $needed"
-    );
-    $fallbackStmt->execute($excluded);
+    try {
+        $selectionDateStmt = $pdo->query(
+            "SELECT MAX(selection_date)
+             FROM hop_daily_random_services
+             WHERE selection_date <= CURDATE()"
+        );
+        $selectionDate = $selectionDateStmt->fetchColumn();
+        if (!is_string($selectionDate) || $selectionDate === '') {
+            return $services;
+        }
 
-    return array_merge($services, $fallbackStmt->fetchAll());
+        $fallbackStmt = $pdo->prepare(
+            "SELECT
+               d.service_key,
+               MAX(tr.label) AS label,
+               MAX(tr.train_number) AS train_number,
+               MAX(tr.category) AS category,
+               MAX(tr.origin_name) AS origin_name,
+               MAX(tr.destination_name) AS destination_name,
+               COUNT(DISTINCT tr.operating_date) AS days_count,
+               MAX(tr.operating_date) AS last_date
+             FROM hop_daily_random_services d
+             JOIN hop_train_runs tr ON tr.service_key = d.service_key
+             WHERE d.selection_date = ?
+               AND (tr.label REGEXP '^(EIC|EIP|IC|TLK)([[:space:]]|$)' OR tr.category IN ('EIC', 'EIP', 'IC', 'TLK'))
+               $excludeSql
+             GROUP BY d.service_key, d.position
+             ORDER BY d.position ASC
+             LIMIT $needed"
+        );
+        $fallbackStmt->execute(array_merge([$selectionDate], $excluded));
+
+        return array_merge($services, $fallbackStmt->fetchAll());
+    } catch (Throwable $exception) {
+        return $services;
+    }
 }
 
 function hop_page_top_delay_services(PDO $pdo, string $period): array
@@ -583,6 +618,7 @@ try {
 
     $pdo = hop_pdo();
     hop_page_ensure_search_table($pdo);
+    hop_page_ensure_daily_random_table($pdo);
     $services = hop_page_services($pdo);
     $requestedSlug = isset($_GET['historia_opoznien']) && !is_array($_GET['historia_opoznien']) ? trim((string) $_GET['historia_opoznien']) : '';
     $legacyServiceKey = isset($_GET['service']) && !is_array($_GET['service']) ? (string) $_GET['service'] : '';

@@ -104,3 +104,15 @@ CREATE TABLE IF NOT EXISTS hop_train_searches (
   KEY idx_hop_searches_date_service (searched_at, service_key),
   KEY idx_hop_searches_service (service_key)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS hop_daily_random_services (
+  selection_date DATE NOT NULL,
+  observation_date DATE NOT NULL,
+  position SMALLINT UNSIGNED NOT NULL,
+  service_key CHAR(40) NOT NULL,
+  generated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (selection_date, position),
+  UNIQUE KEY uq_hop_daily_random_service (selection_date, service_key),
+  KEY idx_hop_daily_random_observation (observation_date),
+  KEY idx_hop_daily_random_service (service_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

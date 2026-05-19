@@ -182,6 +182,15 @@ try {
         hop_collect_log('WARN', 'Collection finished without expected inserted rows', $summary);
     }
 
+    $stage = 'refresh_daily_random_services';
+    $stageContext = ['date' => $date];
+    $summary['dailyRandomServices'] = hop_collect_refresh_daily_random_services($pdo, $date);
+    hop_collect_log('INFO', 'Daily random services ready', [
+        'date' => $date,
+        'selection_date' => hop_collect_random_selection_date($date),
+        'services' => $summary['dailyRandomServices'],
+    ]);
+
     $stage = 'finish_run';
     $stageContext = [
         'run_id' => $runId,
@@ -394,6 +403,82 @@ function hop_collect_requested_date(bool $isCli): string
     }
 
     return (new DateTimeImmutable('now', new DateTimeZone('Europe/Warsaw')))->format('Y-m-d');
+}
+
+function hop_collect_refresh_daily_random_services(PDO $pdo, string $observationDate): int
+{
+    hop_collect_ensure_daily_random_table($pdo);
+
+    $selectionDate = hop_collect_random_selection_date($observationDate);
+    $existingStmt = $pdo->prepare(
+        "SELECT COUNT(*)
+         FROM hop_daily_random_services
+         WHERE selection_date = :selection_date"
+    );
+    $existingStmt->execute(['selection_date' => $selectionDate]);
+    $existing = (int) $existingStmt->fetchColumn();
+    if ($existing > 0) {
+        return $existing;
+    }
+
+    $selectStmt = $pdo->prepare(
+        "SELECT tr.service_key
+         FROM hop_train_runs tr
+         JOIN hop_station_observations obs ON obs.train_run_id = tr.id
+         WHERE obs.observation_date = :observation_date
+           AND (tr.label REGEXP '^(EIC|EIP|IC|TLK)([[:space:]]|$)' OR tr.category IN ('EIC', 'EIP', 'IC', 'TLK'))
+         GROUP BY tr.service_key
+         ORDER BY RAND()
+         LIMIT 10"
+    );
+    $selectStmt->execute(['observation_date' => $observationDate]);
+    $serviceKeys = $selectStmt->fetchAll(PDO::FETCH_COLUMN);
+    if ($serviceKeys === []) {
+        return 0;
+    }
+
+    $insertStmt = $pdo->prepare(
+        "INSERT INTO hop_daily_random_services (selection_date, observation_date, position, service_key, generated_at)
+         VALUES (:selection_date, :observation_date, :position, :service_key, NOW())
+         ON DUPLICATE KEY UPDATE service_key = VALUES(service_key), generated_at = VALUES(generated_at)"
+    );
+
+    $position = 1;
+    foreach ($serviceKeys as $serviceKey) {
+        $insertStmt->execute([
+            'selection_date' => $selectionDate,
+            'observation_date' => $observationDate,
+            'position' => $position,
+            'service_key' => $serviceKey,
+        ]);
+        $position++;
+    }
+
+    return $position - 1;
+}
+
+function hop_collect_ensure_daily_random_table(PDO $pdo): void
+{
+    $pdo->exec(
+        "CREATE TABLE IF NOT EXISTS hop_daily_random_services (
+          selection_date DATE NOT NULL,
+          observation_date DATE NOT NULL,
+          position SMALLINT UNSIGNED NOT NULL,
+          service_key CHAR(40) NOT NULL,
+          generated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (selection_date, position),
+          UNIQUE KEY uq_hop_daily_random_service (selection_date, service_key),
+          KEY idx_hop_daily_random_observation (observation_date),
+          KEY idx_hop_daily_random_service (service_key)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    );
+}
+
+function hop_collect_random_selection_date(string $observationDate): string
+{
+    return (new DateTimeImmutable($observationDate, new DateTimeZone('Europe/Warsaw')))
+        ->modify('+1 day')
+        ->format('Y-m-d');
 }
 
 function hop_collect_schedule_map(PdpClient $client, string $date): array
