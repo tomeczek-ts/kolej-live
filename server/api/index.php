@@ -1831,7 +1831,58 @@ function canonicalTrackedHref(string $href): ?string
         return stationSeoHref(seoSlug((string) $allowed['stacja']), (int) $allowed['id_stacji']);
     }
 
+    if (isset($allowed['szukaj']) && (($allowed['tryb'] ?? '') === 'stacja' || ($allowed['tryb'] ?? '') === 'station')) {
+        $stationHref = stationSeoHrefFromSearch((string) $allowed['szukaj']);
+        if ($stationHref !== null) {
+            return $stationHref;
+        }
+    }
+
     return '/?' . http_build_query($allowed, '', '&', PHP_QUERY_RFC3986);
+}
+
+function stationSeoHrefFromSearch(string $query): ?string
+{
+    $slug = seoSlug($query);
+    if ($slug === '' || $slug === 'kolej') {
+        return null;
+    }
+
+    foreach (stationSeoLookupRows() as $station) {
+        if (!is_array($station)) {
+            continue;
+        }
+
+        $id = (int) ($station['stationId'] ?? $station['id'] ?? 0);
+        $name = cleanNullable($station['label'] ?? $station['value'] ?? $station['name'] ?? null);
+        if ($id <= 0 || !isPublicStationId($id) || $name === null || !isPublicStationName($name)) {
+            continue;
+        }
+
+        if (seoSlug($name) === $slug) {
+            return stationSeoHref($slug, $id);
+        }
+    }
+
+    return null;
+}
+
+function stationSeoLookupRows(): array
+{
+    $rows = [];
+    $stations = data_read_json('stations.json');
+    if (is_array($stations['items'] ?? null)) {
+        $rows = array_merge($rows, $stations['items']);
+    } elseif (is_array($stations['stations'] ?? null)) {
+        $rows = array_merge($rows, $stations['stations']);
+    }
+
+    $defaultStations = business_setting('search.defaultStations', []);
+    if (is_array($defaultStations)) {
+        $rows = array_merge($rows, $defaultStations);
+    }
+
+    return $rows;
 }
 
 function timestampOrNull($value): ?int
