@@ -27,6 +27,7 @@ return [
     'search.clear' => 'Wyczyść wyszukiwanie',
     'search.location' => 'Najbliższe stacje',
     'search.mode.aria' => 'Tryb wyszukiwania',
+    'search.mode.auto' => 'Auto',
     'search.mode.station' => 'Stacja',
     'search.mode.train' => 'Pociąg',
     'search.refresh' => 'Odśwież',

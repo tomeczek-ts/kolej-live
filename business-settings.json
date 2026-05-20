@@ -9,7 +9,7 @@
     "yellowMaxMinutes": 9
   },
   "search": {
-    "defaultMode": "station",
+    "defaultMode": "auto",
     "stationLimit": 10,
     "trainLimit": 14,
     "suggestionTypes": ["station", "train"],

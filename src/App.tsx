@@ -257,7 +257,9 @@ export default function App() {
         if (active) {
           const nextSuggestions = mode === "train"
             ? result.suggestions.filter((item) => item.type === "train")
-            : result.suggestions.filter((item) => item.type === "station");
+            : mode === "station"
+              ? result.suggestions.filter((item) => item.type === "station")
+              : result.suggestions;
           setSuggestions(nextSuggestions);
         }
       } catch {
@@ -705,6 +707,9 @@ export default function App() {
 
           <div className="controls-row">
             <div className="segmented" aria-label={t("search.mode.aria")}>
+              <button type="button" className={mode === "auto" ? "active" : ""} onClick={() => setMode("auto")}>
+                {t("search.mode.auto")}
+              </button>
               <button type="button" className={mode === "station" ? "active" : ""} onClick={() => setMode("station")}>
                 {t("search.mode.station")}
               </button>

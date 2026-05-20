@@ -27,6 +27,7 @@ return [
     'search.clear' => 'Clear search',
     'search.location' => 'Nearby stations',
     'search.mode.aria' => 'Search mode',
+    'search.mode.auto' => 'Auto',
     'search.mode.station' => 'Station',
     'search.mode.train' => 'Train',
     'search.refresh' => 'Refresh',

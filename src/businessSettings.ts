@@ -6,7 +6,11 @@ type BusinessSettings = typeof settings;
 export const businessSettings = settings as BusinessSettings;
 
 export const defaultSearchMode = (
-  businessSettings.search.defaultMode === "train" ? "train" : "station"
+  businessSettings.search.defaultMode === "train"
+    ? "train"
+    : businessSettings.search.defaultMode === "station"
+      ? "station"
+      : "auto"
 ) satisfies SearchMode;
 
 export const defaultStationSuggestions = businessSettings.search.defaultStations as SearchSuggestion[];
