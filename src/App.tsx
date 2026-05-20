@@ -437,10 +437,20 @@ export default function App() {
         await loadStation(result.stations[0], false, { historyMode: options.historyMode });
       } else if (result.stations.length === 0 && result.trains.length === 1) {
         const trainMatch = preferredTrain(result.trains, options.preferTrainSlug);
-        await loadTrain(trainMatch, false, { historyMode: options.historyMode });
+        const loaded = await loadTrain(trainMatch, false, { historyMode: options.historyMode, suppressError: true });
+        if (!loaded) {
+          setSearch(withTrainDetailWarning(result));
+          setTrain(null);
+          setView("route");
+        }
       } else if (result.stations.length === 0 && options.preferTrainSlug && result.trains[0]) {
         const trainMatch = preferredTrain(result.trains, options.preferTrainSlug);
-        await loadTrain(trainMatch, false, { historyMode: options.historyMode });
+        const loaded = await loadTrain(trainMatch, false, { historyMode: options.historyMode, suppressError: true });
+        if (!loaded) {
+          setSearch(withTrainDetailWarning(result));
+          setTrain(null);
+          setView("route");
+        }
       } else {
         setSearch(result);
       }
@@ -521,7 +531,7 @@ export default function App() {
   async function loadTrain(
     item: Pick<TrainSummary, "scheduleId" | "orderId" | "operationOrderId" | "operatingDate"> & Partial<Pick<TrainSummary, "label">>,
     showLoading = true,
-    options: { historyMode?: "push" | "replace"; updateUrl?: boolean; track?: boolean } = {},
+    options: { historyMode?: "push" | "replace"; updateUrl?: boolean; track?: boolean; suppressError?: boolean } = {},
   ) {
     setError(null);
     setPendingDetail({ title: item.label ?? `${t("detail.route")} ${item.orderId}`, overlineKey: "detail.route", loadingKey: "loading.train" });
@@ -539,8 +549,12 @@ export default function App() {
       if (options.track !== false) {
         void trackSeoLink(link);
       }
+      return true;
     } catch (cause) {
-      setError(errorMessage(cause, t));
+      if (!options.suppressError) {
+        setError(errorMessage(cause, t));
+      }
+      return false;
     } finally {
       setPendingDetail(null);
       if (showLoading) setLoading(null);
@@ -1649,6 +1663,18 @@ function queryFromRoute(route: UrlRoute) {
   if (route.type === "trainList") return route.kind;
 
   return route.query;
+}
+
+function withTrainDetailWarning(result: SearchResponse): SearchResponse {
+  const warning = "Znaleziono pociąg, ale PDP nie zwróciło teraz szczegółów trasy. Wybierz pociąg z listy albo spróbuj ponownie za chwilę.";
+  if (result.warnings.includes(warning)) {
+    return result;
+  }
+
+  return {
+    ...result,
+    warnings: [...result.warnings, warning],
+  };
 }
 
 function publicStationTitle(slug: string) {
