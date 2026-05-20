@@ -212,13 +212,14 @@ function translationsEndpoint(): array
 
 function seoLinksEndpoint(): array
 {
-    $recentLimit = business_setting_int('search.recentLinksLimit', 10, 1, 30);
-    $randomLimit = business_setting_int('search.randomLinksLimit', 6, 0, 30);
+    $totalLimit = business_setting_int('search.recentLinksLimit', 10, 1, 30);
+    $randomLimit = business_setting_int('search.randomLinksLimit', 6, 0, $totalLimit);
+    $recentLimit = max(0, $totalLimit - $randomLimit);
     $recent = recentSeoLinks($recentLimit);
     $random = randomSeoLinks($randomLimit, array_column($recent, 'href'));
 
     return [
-        'links' => array_slice(array_merge($recent, $random), 0, $recentLimit),
+        'links' => mixedSeoLinks($recent, $random, $totalLimit),
         'recent' => $recent,
         'random' => $random,
         'generatedAt' => gmdate(DATE_ATOM),
@@ -850,6 +851,14 @@ function recentSeoLinks(int $limit): array
     return $links;
 }
 
+function mixedSeoLinks(array $recent, array $random, int $limit): array
+{
+    $links = array_merge($recent, $random);
+    shuffle($links);
+
+    return array_slice($links, 0, $limit);
+}
+
 function randomSeoLinks(int $limit, array $excludeHrefs = []): array
 {
     $excluded = array_fill_keys(array_filter(array_map('strval', $excludeHrefs)), true);
@@ -877,6 +886,10 @@ function randomSeoLinks(int $limit, array $excludeHrefs = []): array
         }
     }
 
+    foreach (defaultStationSeoLinks('random') as $link) {
+        $candidates[] = $link;
+    }
+
     shuffle($candidates);
 
     $links = [];
@@ -890,6 +903,39 @@ function randomSeoLinks(int $limit, array $excludeHrefs = []): array
         if (count($links) >= $limit) {
             break;
         }
+    }
+
+    return $links;
+}
+
+function defaultStationSeoLinks(string $source): array
+{
+    $links = [];
+    $stations = business_setting('search.defaultStations', []);
+    if (!is_array($stations)) {
+        return $links;
+    }
+
+    foreach ($stations as $station) {
+        if (!is_array($station)) {
+            continue;
+        }
+
+        $label = cleanNullable($station['label'] ?? $station['value'] ?? null);
+        if ($label === null || !isPublicStationName($label)) {
+            continue;
+        }
+
+        $stationId = (int) ($station['stationId'] ?? $station['id'] ?? 0);
+        $slug = seoSlug($label);
+        $links[] = [
+            'type' => 'station',
+            'label' => $label,
+            'slug' => $slug,
+            'href' => $stationId > 0 ? ('/?stacja=' . rawurlencode($slug) . '&id_stacji=' . $stationId) : ('/?szukaj=' . rawurlencode($slug) . '&tryb=stacja'),
+            'subtitle' => 'Stacja',
+            'source' => $source,
+        ];
     }
 
     return $links;
