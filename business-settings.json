@@ -1,0 +1,39 @@
+{
+  "googleTagId": "G-FDKKPY1RE1",
+  "stationBoard": {
+    "pastItemsInitial": 5,
+    "pastItemsStep": 10
+  },
+  "delayThresholds": {
+    "greenMaxMinutes": 0,
+    "yellowMaxMinutes": 9
+  },
+  "search": {
+    "defaultMode": "station",
+    "stationLimit": 10,
+    "trainLimit": 14,
+    "suggestionTypes": ["station", "train"],
+    "defaultStations": [
+      { "type": "station", "label": "Warszawa Centralna", "subtitle": "Stacja", "value": "Warszawa Centralna", "stationId": 5100069 },
+      { "type": "station", "label": "Kraków Główny", "subtitle": "Stacja", "value": "Kraków Główny" },
+      { "type": "station", "label": "Poznań Główny", "subtitle": "Stacja", "value": "Poznań Główny" },
+      { "type": "station", "label": "Gdańsk Główny", "subtitle": "Stacja", "value": "Gdańsk Główny" },
+      { "type": "station", "label": "Wrocław Główny", "subtitle": "Stacja", "value": "Wrocław Główny" },
+      { "type": "station", "label": "Katowice", "subtitle": "Stacja", "value": "Katowice" }
+    ]
+  },
+  "apiCacheTtlSeconds": {
+    "stations": 86400,
+    "stationSchedules": 45,
+    "daySchedules": 600,
+    "route": 300,
+    "stationOperations": 18,
+    "trainOperation": 12,
+    "statistics": 45,
+    "disruptions": 60
+  },
+  "hop": {
+    "randomServicesPerDay": 6,
+    "popularServicePrefixes": ["EIC", "EIP", "IC", "TLK"]
+  }
+}

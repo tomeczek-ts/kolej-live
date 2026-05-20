@@ -19,7 +19,7 @@ function pdp_stations_search(PdpClient $client, string $search = '', int $pageSi
         'search' => $search,
         'page' => 1,
         'pageSize' => min(max($pageSize, 1), 10000),
-    ], 86400);
+    ], function_exists('business_cache_ttl') ? business_cache_ttl('stations', 86400) : 86400);
 }
 
 /**

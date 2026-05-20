@@ -10,6 +10,11 @@ $hopTranslations = $hopTranslationsPath !== null ? require $hopTranslationsPath 
 if (!is_array($hopTranslations)) {
     $hopTranslations = [];
 }
+$businessSettingsPath = hop_public_api_path('lib/BusinessSettings.php');
+if ($businessSettingsPath !== null) {
+    require_once $businessSettingsPath;
+}
+$googleTagId = function_exists('business_setting') ? (string) business_setting('googleTagId', '') : '';
 $bootstrapError = null;
 $databasePath = hop_public_api_path('hop/Database.php');
 if ($databasePath === null) {
@@ -726,15 +731,16 @@ $pageJsonLd = hop_page_json_ld($pageMeta, $selectedService);
       }
     })();
   </script>
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-FDKKPY1RE1"></script>
+  <?php if ($googleTagId !== ''): ?>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=<?= e($googleTagId) ?>"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
 
-    gtag('config', 'G-FDKKPY1RE1');
+    gtag('config', '<?= e($googleTagId) ?>');
   </script>
+  <?php endif; ?>
   <script type="application/ld+json">
 <?= $pageJsonLd ?>
   </script>
@@ -771,6 +777,21 @@ $pageJsonLd = hop_page_json_ld($pageMeta, $selectedService);
       --focus: 0 0 0 3px rgba(255, 91, 102, .32);
     }
     :root[data-accessibility="true"] {
+      color-scheme: light;
+      --bg: #fffdf0;
+      --ink: #050505;
+      --muted: #3b3511;
+      --line: #6f5d00;
+      --soft: #fff3b0;
+      --surface: #ffffff;
+      --surface-muted: #fff7cb;
+      --red: #9b111e;
+      --green: #005f3f;
+      --amber: #765000;
+      --shadow: 0 18px 48px rgba(5, 5, 5, .14);
+      --focus: 0 0 0 4px rgba(5, 5, 5, .28);
+    }
+    :root[data-theme="dark"][data-accessibility="true"] {
       color-scheme: dark;
       --bg: #050505;
       --ink: #fff8c9;
@@ -792,7 +813,7 @@ $pageJsonLd = hop_page_json_ld($pageMeta, $selectedService);
     .brand { display: flex; align-items: center; gap: 14px; color: var(--ink); text-decoration: none; }
     .brand-logo { width: 196px; height: auto; display: block; }
     :root[data-theme="dark"] .brand-logo { content: url("/kolej-live-logo-dark.svg"); }
-    :root[data-accessibility="true"] .brand-logo { content: url("/kolej-live-logo-dark.svg"); }
+    :root[data-theme="dark"][data-accessibility="true"] .brand-logo { content: url("/kolej-live-logo-dark.svg"); }
     .brand span { max-width: 360px; font-size: clamp(15px, 2vw, 18px); line-height: 1.15; font-weight: 760; letter-spacing: 0; }
     .top-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; flex-wrap: wrap; }
     .parent-service { display: grid; justify-items: end; gap: 2px; color: var(--muted); font-size: 12px; font-weight: 720; }

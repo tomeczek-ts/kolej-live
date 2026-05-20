@@ -21,5 +21,5 @@ function pdp_disruptions(PdpClient $client, string $date, ?int $stationId = null
         'dateTo' => $date,
         'stations' => $stationId !== null ? (string) $stationId : null,
         'dictionaries' => true,
-    ], 60);
+    ], function_exists('business_cache_ttl') ? business_cache_ttl('disruptions', 60) : 60);
 }

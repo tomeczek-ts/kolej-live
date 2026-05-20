@@ -22,7 +22,7 @@ function pdp_schedules_for_station(PdpClient $client, int $stationId, string $da
         'stations' => (string) $stationId,
         'fullRoute' => true,
         'dictionaries' => true,
-    ], 45);
+    ], function_exists('business_cache_ttl') ? business_cache_ttl('stationSchedules', 45) : 45);
 }
 
 /**
@@ -41,7 +41,7 @@ function pdp_schedules_for_day(PdpClient $client, string $date): array
         'dateTo' => $date,
         'fullRoute' => true,
         'dictionaries' => true,
-    ], 120);
+    ], function_exists('business_cache_ttl') ? business_cache_ttl('daySchedules', 120) : 120);
 }
 
 /**
@@ -54,7 +54,11 @@ function pdp_schedules_for_day(PdpClient $client, string $date): array
  */
 function pdp_schedule_route(PdpClient $client, int $scheduleId, int $orderId): array
 {
-    return $client->get('/api/v1/schedules/route/' . rawurlencode((string) $scheduleId) . '/' . rawurlencode((string) $orderId), [], 300);
+    return $client->get(
+        '/api/v1/schedules/route/' . rawurlencode((string) $scheduleId) . '/' . rawurlencode((string) $orderId),
+        [],
+        function_exists('business_cache_ttl') ? business_cache_ttl('route', 300) : 300
+    );
 }
 
 /**

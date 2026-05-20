@@ -7,6 +7,7 @@ require __DIR__ . '/PdpClient.php';
 require __DIR__ . '/lib/DataFiles.php';
 require __DIR__ . '/lib/Translations.php';
 require __DIR__ . '/lib/StationCoordinates.php';
+require __DIR__ . '/lib/BusinessSettings.php';
 require __DIR__ . '/pdp/stations.php';
 require __DIR__ . '/pdp/schedules.php';
 require __DIR__ . '/pdp/operations.php';
@@ -128,12 +129,12 @@ function searchEndpoint(PdpClient $client): array
     $warnings = [];
 
     if ($mode === 'auto' || $mode === 'station') {
-        $stations = stationSuggestions($client, $query, 10);
+        $stations = stationSuggestions($client, $query, business_setting_int('search.stationLimit', 10, 1, 50));
     }
 
     if ($mode === 'auto' || $mode === 'train') {
         try {
-            $trains = trainSuggestions($client, $query, $date, 14);
+            $trains = trainSuggestions($client, $query, $date, business_setting_int('search.trainLimit', 14, 1, 50));
         } catch (Throwable $exception) {
             $warnings[] = 'Nie udalo sie pobrac listy pociagow: ' . $exception->getMessage();
         }
@@ -315,14 +316,10 @@ function suggestEndpoint(PdpClient $client): array
         ];
     }
 
-    foreach (dictionarySuggestions($client, $query, max(3, (int) floor($limit / 2))) as $item) {
-        $suggestions[] = $item;
-    }
-
     return [
         'query' => $query,
         'date' => $date,
-        'suggestions' => array_slice($suggestions, 0, $limit * 3),
+        'suggestions' => array_slice($suggestions, 0, $limit * 2),
         'generatedAt' => gmdate(DATE_ATOM),
     ];
 }
@@ -810,104 +807,6 @@ function normalizeTrainSummary(array $train, string $date): array
         'firstDeparture' => cleanNullable($train['firstDeparture'] ?? null),
         'lastArrival' => cleanNullable($train['lastArrival'] ?? null),
     ];
-}
-
-function dictionarySuggestions(PdpClient $client, string $query, int $limit): array
-{
-    $suggestions = [];
-
-    $carriers = data_find_items('carriers.json', $query, $limit, ['code', 'name']);
-    if ($carriers === []) {
-        $carriers = pdp_carriers($client)['carriers'] ?? [];
-        $carriers = filterDictionaryRows($carriers, $query, ['code', 'name'], $limit);
-    }
-
-    foreach ($carriers as $carrier) {
-        $code = cleanNullable($carrier['code'] ?? null);
-        $name = cleanNullable($carrier['name'] ?? null);
-        if ($code === null && $name === null) {
-            continue;
-        }
-
-        $suggestions[] = [
-            'type' => 'carrier',
-            'label' => $name ?? $code,
-            'subtitle' => $code !== null ? 'Przewoznik: ' . $code : 'Przewoznik',
-            'value' => $code ?? $name,
-        ];
-    }
-
-    $categories = data_find_items('commercial-categories.json', $query, $limit, ['code', 'name', 'carrierCode', 'speedCategoryCode']);
-    if ($categories === []) {
-        $categories = pdp_commercial_categories($client)['commercialCategories'] ?? [];
-        $categories = filterDictionaryRows($categories, $query, ['code', 'name', 'carrierCode', 'speedCategoryCode'], $limit);
-    }
-
-    foreach ($categories as $category) {
-        $code = cleanNullable($category['code'] ?? null);
-        $name = cleanNullable($category['name'] ?? null);
-        if ($code === null && $name === null) {
-            continue;
-        }
-
-        $suggestions[] = [
-            'type' => 'category',
-            'label' => trim(($code ?? '') . ($name !== null ? ' - ' . $name : '')),
-            'subtitle' => cleanNullable($category['carrierCode'] ?? null) !== null ? 'Kategoria, ' . $category['carrierCode'] : 'Kategoria handlowa',
-            'value' => $code ?? $name,
-        ];
-    }
-
-    $cities = data_find_items('cities.json', $query, $limit, ['name']);
-    if ($cities === []) {
-        $cities = pdp_cities($client, $query)['cities'] ?? [];
-        $cities = filterDictionaryRows($cities, $query, ['name'], $limit);
-    }
-
-    foreach ($cities as $city) {
-        $name = cleanNullable($city['name'] ?? null);
-        if ($name === null) {
-            continue;
-        }
-
-        $count = (int) ($city['stationCount'] ?? count($city['stationIds'] ?? []));
-        $suggestions[] = [
-            'type' => 'city',
-            'label' => $name,
-            'subtitle' => 'Miasto, stacje: ' . $count,
-            'value' => $name,
-            'stationIds' => array_values(array_map('intval', $city['stationIds'] ?? [])),
-        ];
-    }
-
-    return $suggestions;
-}
-
-function filterDictionaryRows(array $rows, string $query, array $fields, int $limit): array
-{
-    $needle = normalizeText($query);
-    $matches = [];
-
-    foreach ($rows as $row) {
-        if (!is_array($row)) {
-            continue;
-        }
-
-        $haystack = [];
-        foreach ($fields as $field) {
-            $haystack[] = (string) ($row[$field] ?? '');
-        }
-
-        if (strpos(normalizeText(implode(' ', $haystack)), $needle) !== false) {
-            $matches[] = $row;
-        }
-
-        if (count($matches) >= $limit) {
-            break;
-        }
-    }
-
-    return $matches;
 }
 
 function recentSeoLinks(int $limit): array

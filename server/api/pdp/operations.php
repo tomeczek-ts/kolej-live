@@ -22,7 +22,7 @@ function pdp_operations_for_station(PdpClient $client, int $stationId): array
         'withPlanned' => true,
         'page' => 1,
         'pageSize' => 5000,
-    ], 18);
+    ], function_exists('business_cache_ttl') ? business_cache_ttl('stationOperations', 18) : 18);
 }
 
 /**
@@ -60,7 +60,7 @@ function pdp_operation_train(PdpClient $client, int $scheduleId, int $orderId, s
     return $client->get(
         '/api/v1/operations/train/' . rawurlencode((string) $scheduleId) . '/' . rawurlencode((string) $orderId) . '/' . rawurlencode($operatingDate),
         [],
-        12
+        function_exists('business_cache_ttl') ? business_cache_ttl('trainOperation', 12) : 12
     );
 }
 
@@ -74,5 +74,9 @@ function pdp_operation_train(PdpClient $client, int $scheduleId, int $orderId, s
  */
 function pdp_operation_statistics(PdpClient $client, string $date): array
 {
-    return $client->get('/api/v1/operations/statistics', ['date' => $date], 45);
+    return $client->get(
+        '/api/v1/operations/statistics',
+        ['date' => $date],
+        function_exists('business_cache_ttl') ? business_cache_ttl('statistics', 45) : 45
+    );
 }

@@ -1,7 +1,7 @@
 export type SearchMode = "auto" | "station" | "train";
 export type BoardKind = "departure" | "arrival";
 export type AppView = "status" | "arrivals" | "departures" | "route" | "disruptions" | "trains";
-export type SuggestionType = "station" | "train" | "carrier" | "category" | "city";
+export type SuggestionType = "station" | "train";
 
 export interface ApiErrorPayload {
   error?: {
@@ -23,7 +23,6 @@ export interface SearchSuggestion {
   subtitle: string;
   value: string;
   stationId?: number;
-  stationIds?: number[];
   scheduleId?: number;
   orderId?: number;
   operationOrderId?: number;

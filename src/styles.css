@@ -50,6 +50,29 @@
 }
 
 :root[data-accessibility="true"] {
+  color-scheme: light;
+  background: #fffdf0;
+  color: #050505;
+  --bg: #fffdf0;
+  --ink: #050505;
+  --muted: #3b3511;
+  --soft: #fff3b0;
+  --soft-2: #ffe66a;
+  --line: #6f5d00;
+  --line-strong: #050505;
+  --red: #9b111e;
+  --red-dark: #650a12;
+  --green: #005f3f;
+  --green-soft: #dcf7df;
+  --amber: #765000;
+  --amber-soft: #fff0a6;
+  --shadow: 0 18px 48px rgba(5, 5, 5, 0.14);
+  --surface: #ffffff;
+  --surface-muted: #fff7cb;
+  --focus: 0 0 0 4px rgba(5, 5, 5, 0.28);
+}
+
+:root[data-theme="dark"][data-accessibility="true"] {
   color-scheme: dark;
   background: #050505;
   color: #fff8c9;
@@ -137,7 +160,7 @@ a {
   content: url("/kolej-live-logo-dark.svg");
 }
 
-:root[data-accessibility="true"] .brand-logo {
+:root[data-theme="dark"][data-accessibility="true"] .brand-logo {
   content: url("/kolej-live-logo-dark.svg");
 }
 
@@ -577,28 +600,6 @@ a {
 .tabbar button.active {
   color: #ffffff;
   background: var(--ink);
-}
-
-.date-field {
-  min-height: 42px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 10px;
-  color: var(--muted);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-}
-
-.date-field input {
-  max-width: 142px;
-  color: var(--ink);
-  border: 0;
-  outline: 0;
-  background: transparent;
-  font-size: 14px;
-  font-weight: 650;
 }
 
 .ghost-button {
@@ -1092,6 +1093,11 @@ a {
   background: var(--amber-soft);
 }
 
+.delay-badge.severe {
+  color: var(--red-dark);
+  background: color-mix(in srgb, var(--red) 10%, var(--surface));
+}
+
 .status-badge.cancelled {
   color: var(--red-dark);
   background: color-mix(in srgb, var(--red) 10%, var(--surface));
@@ -1400,13 +1406,15 @@ select:focus-visible {
 }
 
 :root[data-accessibility="true"] .icon-button,
-:root[data-accessibility="true"] .stat,
-:root[data-accessibility="true"] .ghost-button,
-:root[data-accessibility="true"] .date-field,
-:root[data-accessibility="true"] .locale-control,
 :root[data-accessibility="true"] .theme-controls button {
   width: 46px;
   min-width: 46px;
+  min-height: 46px;
+}
+
+:root[data-accessibility="true"] .stat,
+:root[data-accessibility="true"] .ghost-button,
+:root[data-accessibility="true"] .locale-control {
   min-height: 46px;
 }
 
@@ -1516,15 +1524,6 @@ select:focus-visible {
 
   .search-field input {
     font-size: 16px;
-  }
-
-  .date-field {
-    max-width: 100%;
-  }
-
-  .date-field input {
-    width: 96px;
-    max-width: calc(100vw - 250px);
   }
 
   .workspace {

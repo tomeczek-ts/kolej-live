@@ -1,6 +1,8 @@
 <?php
 
 return [
+    // HOP reads the same server/api/config.local.php file as kolej.live.
+    // This file is kept only as a backwards-compatible fallback for old deployments.
     'HOP_DB_HOST' => 'localhost',
     'HOP_DB_NAME' => 'WSTAW_NAZWE_BAZY',
     'HOP_DB_USER' => 'WSTAW_UZYTKOWNIKA_BAZY',

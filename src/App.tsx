@@ -3,7 +3,6 @@ import {
   AlertTriangle,
   ArrowDownToLine,
   ArrowUpFromLine,
-  CalendarDays,
   ChevronRight,
   CircleOff,
   Clock3,
@@ -26,6 +25,13 @@ import {
 import type { FormEvent, MouseEvent, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { api, AppApiError } from "./api";
+import { installGoogleAnalytics } from "./analytics";
+import {
+  defaultSearchMode,
+  delayThresholds,
+  googleTagId,
+  stationBoardSettings,
+} from "./businessSettings";
 import {
   dateTimeLocales,
   defaultLocale,
@@ -78,13 +84,13 @@ type PendingDetail = {
 
 type ThemeMode = "light" | "dark";
 
-const today = new Date().toISOString().slice(0, 10);
+const today = todayWarsaw();
 const defaultQuery = "";
-const pastBoardLimit = 5;
-const pastBoardPageSize = 10;
+const pastBoardLimit = stationBoardSettings.pastItemsInitial;
+const pastBoardPageSize = stationBoardSettings.pastItemsStep;
 const boardDayMs = 24 * 60 * 60 * 1000;
 const initialRoute = routeFromLocation(window.location);
-const initialDate = initialRoute?.date ?? today;
+const initialDate = today;
 const themeStorageKey = "kolej.live.theme";
 const accessibilityStorageKey = "kolej.live.accessibility";
 const cookieStorageKey = "kolej.live.cookies";
@@ -120,8 +126,8 @@ export default function App() {
   const [textMaps, setTextMaps] = useState<TextsByLocale>(texts);
   const [view, setView] = useState<AppView>("status");
   const [query, setQuery] = useState(initialRoute ? queryFromRoute(initialRoute) : defaultQuery);
-  const [mode, setMode] = useState<SearchMode>("auto");
-  const [date, setDate] = useState(initialDate);
+  const [mode, setMode] = useState<SearchMode>(defaultSearchMode);
+  const date = initialDate;
   const [search, setSearch] = useState<SearchResponse | null>(null);
   const [station, setStation] = useState<StationResponse | null>(null);
   const [train, setTrain] = useState<TrainResponse | null>(null);
@@ -198,6 +204,7 @@ export default function App() {
   }, [locale]);
 
   useEffect(() => {
+    installGoogleAnalytics(googleTagId);
     void refreshStats(initialDate);
     void refreshSeoLinks();
 
@@ -218,7 +225,7 @@ export default function App() {
         setTrainList(null);
         setSearch(null);
         setView("status");
-        setMode("auto");
+        setMode(defaultSearchMode);
         setQuery(defaultQuery);
       }
     };
@@ -249,8 +256,8 @@ export default function App() {
         const result = await api.suggest(value, date);
         if (active) {
           const nextSuggestions = mode === "train"
-            ? result.suggestions.filter((item) => item.type !== "train")
-            : result.suggestions;
+            ? result.suggestions.filter((item) => item.type === "train")
+            : result.suggestions.filter((item) => item.type === "station");
           setSuggestions(nextSuggestions);
         }
       } catch {
@@ -296,8 +303,6 @@ export default function App() {
       setBoardKind("arrival");
     } else if (nextView === "departures") {
       setBoardKind("departure");
-    } else if (nextView === "route") {
-      setMode("train");
     } else if (nextView === "disruptions") {
       void refreshDisruptions(station?.station.id);
     } else if (nextView === "trains") {
@@ -312,7 +317,7 @@ export default function App() {
 
   function clearSearchForm() {
     setQuery(defaultQuery);
-    setMode("auto");
+    setMode(defaultSearchMode);
     setSearch(null);
     setStation(null);
     setTrain(null);
@@ -348,13 +353,8 @@ export default function App() {
   }
 
   async function applyUrlRoute(route: UrlRoute, historyMode: "push" | "replace" = "replace") {
-    if (route.date && route.date !== date) {
-      setDate(route.date);
-      void refreshStats(route.date);
-    }
-
     if (route.type === "station") {
-      const stationName = deslug(route.slug) || `Stacja ${route.id}`;
+      const stationName = publicStationTitle(route.slug) ?? "";
       setMode("station");
       setQuery(stationName);
       await loadStation({ id: route.id, name: stationName }, true, { historyMode });
@@ -375,13 +375,13 @@ export default function App() {
     if (route.type === "trainList") {
       setMode("train");
       setQuery(trainListQuery(route.kind, t));
-      await loadTrainList(route.kind, true, { historyMode, date: route.date });
+      await loadTrainList(route.kind, true, { historyMode });
       return;
     }
 
-    setMode(route.mode);
+    setMode(route.mode === "train" ? "train" : "station");
     setQuery(route.query);
-    await runSearch(undefined, route.query, route.mode, { historyMode });
+    await runSearch(undefined, route.query, route.mode === "train" ? "train" : "station", { historyMode });
   }
 
   function navigateToSeoLink(event: MouseEvent<HTMLAnchorElement>, link: SeoLink) {
@@ -477,7 +477,7 @@ export default function App() {
 
   async function loadStation(item: StationSuggestion, showLoading = true, options: { historyMode?: "push" | "replace"; updateUrl?: boolean; track?: boolean } = {}) {
     setError(null);
-    setPendingDetail({ title: item.name, overlineKey: "detail.station", loadingKey: "loading.board" });
+    setPendingDetail({ title: displayStationName(item.name, t), overlineKey: "detail.station", loadingKey: "loading.board" });
     setTrain(null);
     setTrainList(null);
     if (view === "arrivals") {
@@ -489,7 +489,8 @@ export default function App() {
     if (showLoading) setLoading("station");
 
     try {
-      const details = await api.station(item.id, date);
+      const response = await api.station(item.id, date);
+      const details = withPublicStationName(response, item.name);
       setStation(details);
       const link = stationSeoLink(details.station);
       if (options.updateUrl !== false) {
@@ -592,8 +593,7 @@ export default function App() {
       return;
     }
 
-    setMode("auto");
-    await runSearch(undefined, item.value || item.label, "auto");
+    await runSearch(undefined, item.value || item.label, mode);
   }
 
   const demoMode = Boolean(search?.demo || station?.demo || train?.demo || trainList?.demo || stats?.demo || disruptions?.demo);
@@ -601,7 +601,6 @@ export default function App() {
     { id: "status", label: t("nav.status") },
     { id: "arrivals", label: t("nav.arrivals") },
     { id: "departures", label: t("nav.departures") },
-    { id: "route", label: t("nav.route") },
     { id: "disruptions", label: t("nav.disruptions") },
   ];
 
@@ -706,9 +705,6 @@ export default function App() {
 
           <div className="controls-row">
             <div className="segmented" aria-label={t("search.mode.aria")}>
-              <button type="button" className={mode === "auto" ? "active" : ""} onClick={() => setMode("auto")}>
-                {t("search.mode.auto")}
-              </button>
               <button type="button" className={mode === "station" ? "active" : ""} onClick={() => setMode("station")}>
                 {t("search.mode.station")}
               </button>
@@ -716,17 +712,6 @@ export default function App() {
                 {t("search.mode.train")}
               </button>
             </div>
-            <label className="date-field">
-              <CalendarDays size={17} />
-              <input
-                type="date"
-                value={date}
-                onChange={(event) => {
-                  setDate(event.target.value);
-                  void refreshStats(event.target.value);
-                }}
-              />
-            </label>
             <button className="ghost-button" type="button" onClick={() => runSearch(undefined)} disabled={loading === "search"}>
               <RefreshCw size={16} />
               {t("search.refresh")}
@@ -1621,9 +1606,6 @@ function hasTemplatePlaceholder(value: string): boolean {
 function suggestionSubtitle(item: SearchSuggestion, t: TranslateFn) {
   if (item.type === "station") return item.subtitle || t("suggestions.station");
   if (item.type === "train") return item.subtitle || t("suggestions.train");
-  if (item.type === "carrier") return item.subtitle || t("suggestions.carrier");
-  if (item.type === "category") return item.subtitle || t("suggestions.category");
-  if (item.type === "city") return item.subtitle || t("suggestions.city");
 
   return item.subtitle;
 }
@@ -1648,11 +1630,59 @@ function writeBrowserUrl(href: string, mode: "push" | "replace") {
 }
 
 function queryFromRoute(route: UrlRoute) {
-  if (route.type === "station") return deslug(route.slug) || `Stacja ${route.id}`;
+  if (route.type === "station") return publicStationTitle(route.slug) ?? "";
   if (route.type === "train") return route.number || deslug(route.slug);
   if (route.type === "trainList") return route.kind;
 
   return route.query;
+}
+
+function publicStationTitle(slug: string) {
+  const title = titleCaseStationName(deslug(slug).trim());
+
+  if (!title || isTechnicalStationTitle(title)) {
+    return null;
+  }
+
+  return title;
+}
+
+function displayStationName(name: string, t: TranslateFn) {
+  return isTechnicalStationTitle(name) ? t("detail.station") : name;
+}
+
+function isTechnicalStationTitle(value: string) {
+  return /^(stacja|station)\s+\d+$/iu.test(value.trim());
+}
+
+function withPublicStationName(response: StationResponse, requestedName: string): StationResponse {
+  const publicName = titleCaseStationName(requestedName.trim());
+
+  if (!publicName || isTechnicalStationTitle(publicName) || !isTechnicalStationTitle(response.station.name)) {
+    return response;
+  }
+
+  return {
+    ...response,
+    station: {
+      ...response.station,
+      name: publicName,
+    },
+  };
+}
+
+function titleCaseStationName(value: string) {
+  return value
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(" ")
+    .map((part) => {
+      if (!part) return part;
+      if (part.length <= 3 && part === part.toUpperCase()) return part;
+
+      return part.charAt(0).toLocaleUpperCase("pl-PL") + part.slice(1);
+    })
+    .join(" ");
 }
 
 function trainListQuery(kind: TrainListKind, t: TranslateFn) {
@@ -1738,7 +1768,11 @@ function StatusBadge({ status, t }: { status: StatusInfo; t: TranslateFn }) {
 function DelayBadge({ delay, t, shortUnknown = false }: { delay: number | null; t: TranslateFn; shortUnknown?: boolean }) {
   if (delay === null) return null;
 
-  const tone = delay === null ? "unknown" : delay > 0 ? "late" : "ok";
+  const tone = delay <= delayThresholds.greenMaxMinutes
+    ? "ok"
+    : delay <= delayThresholds.yellowMaxMinutes
+      ? "late"
+      : "severe";
   const label = delay === null && shortUnknown ? t("delay.noneShort") : formatDelay(delay, t);
 
   return <span className={`delay-badge ${tone}`}>{label}</span>;
@@ -1814,6 +1848,18 @@ function timestampFromDateOnly(value: string) {
   const timestamp = new Date(`${value}T00:00:00`).getTime();
 
   return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
+function todayWarsaw() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Warsaw",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+
+  return `${value.year}-${value.month}-${value.day}`;
 }
 
 function formatDelay(delay: number | null, t: TranslateFn) {
