@@ -719,6 +719,7 @@ $pageJsonLd = hop_page_json_ld($pageMeta, $selectedService);
   <meta name="application-name" content="HOP">
   <meta name="theme-color" content="#c7222a">
   <link rel="canonical" href="<?= e($pageMeta['canonical']) ?>">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="alternate" hreflang="pl-PL" href="<?= e($pageMeta['canonical']) ?>">
   <link rel="alternate" hreflang="x-default" href="<?= e($pageMeta['canonical']) ?>">
   <meta property="og:locale" content="pl_PL">
