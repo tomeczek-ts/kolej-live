@@ -23,7 +23,7 @@ import {
   Wifi,
   X,
 } from "lucide-react";
-import type { FormEvent, MouseEvent, ReactNode, TouchEvent, WheelEvent } from "react";
+import type { FormEvent, MouseEvent, ReactNode, WheelEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { api, AppApiError } from "./api";
 import {
@@ -1164,7 +1164,6 @@ function StationBoard({
 }) {
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   const [pastLimit, setPastLimit] = useState(pastBoardLimit);
-  const [touchStartY, setTouchStartY] = useState<number | null>(null);
 
   useEffect(() => {
     setCurrentTime(Date.now());
@@ -1215,16 +1214,6 @@ function StationBoard({
     }
   };
 
-  const handleBoardTouchMove = (event: TouchEvent<HTMLDivElement>) => {
-    const touch = event.touches[0];
-    if (!touch || touchStartY === null) return;
-
-    if (touch.clientY - touchStartY > 34) {
-      loadEarlierBoardItems();
-      setTouchStartY(touch.clientY);
-    }
-  };
-
   return (
     <>
       <div className="detail-header">
@@ -1250,9 +1239,6 @@ function StationBoard({
         <div
           className="board-table"
           onWheel={handleBoardWheel}
-          onTouchStart={(event) => setTouchStartY(event.touches[0]?.clientY ?? null)}
-          onTouchMove={handleBoardTouchMove}
-          onTouchEnd={() => setTouchStartY(null)}
         >
           <div className="board-head">
             <span>{t("board.time")}</span>
