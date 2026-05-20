@@ -21,6 +21,7 @@ $urls = [
     ['loc' => $baseUrl . '/?lista=pociagi-w-trasie', 'priority' => '0.9'],
     ['loc' => $baseUrl . '/?lista=pociagi-odwolane', 'priority' => '0.9'],
     ['loc' => $hopBaseUrl . '/', 'priority' => '0.8'],
+    ['loc' => $hopBaseUrl . '/?pociagi=wszystkie', 'priority' => '0.7'],
     ['loc' => $hopBaseUrl . '/sitemap.xml', 'priority' => '0.4'],
 ];
 
@@ -59,10 +60,18 @@ foreach (sitemap_hop_services(20000) as $service) {
         continue;
     }
 
+    $lastmod = sitemap_clean($service['lastmod'] ?? null) ?? $today;
+
+    $urls[] = [
+        'loc' => $baseUrl . '/?pociag=' . rawurlencode($slug),
+        'priority' => '0.65',
+        'lastmod' => $lastmod,
+    ];
+
     $urls[] = [
         'loc' => $hopBaseUrl . '/?historia_opoznien=' . rawurlencode($slug),
         'priority' => '0.7',
-        'lastmod' => sitemap_clean($service['lastmod'] ?? null) ?? $today,
+        'lastmod' => $lastmod,
     ];
 }
 

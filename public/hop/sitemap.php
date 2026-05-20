@@ -11,6 +11,7 @@ $baseUrl = 'https://hop.kolej.live';
 $today = (new DateTimeImmutable('now', new DateTimeZone('Europe/Warsaw')))->format('Y-m-d');
 $urls = [
     ['loc' => $baseUrl . '/', 'priority' => '1.0', 'lastmod' => $today],
+    ['loc' => $baseUrl . '/?pociagi=wszystkie', 'priority' => '0.9', 'lastmod' => $today],
 ];
 
 $databasePath = hop_public_api_path('hop/Database.php');

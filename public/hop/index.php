@@ -113,9 +113,13 @@ function hop_page_service_options(array $services): array
     }, $services);
 }
 
-function hop_page_canonical_url(?array $service = null): string
+function hop_page_canonical_url(?array $service = null, string $pageKind = 'home'): string
 {
     $baseUrl = 'https://hop.kolej.live/';
+
+    if ($pageKind === 'all_trains') {
+        return $baseUrl . '?pociagi=wszystkie';
+    }
 
     if ($service === null) {
         return $baseUrl;
@@ -129,14 +133,19 @@ function hop_page_service_url(array $service): string
     return hop_page_canonical_url($service);
 }
 
-function hop_page_meta(?array $service, array $summary): array
+function hop_page_meta(?array $service, array $summary, string $pageKind = 'home'): array
 {
-    $canonical = hop_page_canonical_url($service);
+    $canonical = hop_page_canonical_url($service, $pageKind);
     $image = 'https://hop.kolej.live/kolej-live-logo.svg';
     $siteName = hop_t('hop.meta.site_name');
     $serviceLabel = $service !== null ? hop_page_service_label($service) : null;
 
-    if ($serviceLabel !== null) {
+    if ($pageKind === 'all_trains') {
+        $title = hop_t('hop.meta.all_trains_title');
+        $description = hop_t('hop.meta.all_trains_description');
+        $keywords = hop_t('hop.meta.all_trains_keywords');
+        $type = 'website';
+    } elseif ($serviceLabel !== null) {
         $title = hop_t('hop.meta.service_title', ['service' => $serviceLabel]);
         $description = hop_t('hop.meta.service_description', ['service' => $serviceLabel]);
         $keywords = hop_t('hop.meta.service_keywords', ['service' => $serviceLabel]);
@@ -620,6 +629,7 @@ $summary = [];
 $popularServices = [];
 $topYesterday = [];
 $topMonth = [];
+$showAllServices = isset($_GET['pociagi']) && !is_array($_GET['pociagi']) && (string) $_GET['pociagi'] === 'wszystkie';
 
 try {
     if ($error !== null) {
@@ -692,7 +702,8 @@ try {
     $error = $exception->getMessage();
 }
 
-$pageMeta = hop_page_meta($selectedService, $summary);
+$pageKind = $showAllServices ? 'all_trains' : 'home';
+$pageMeta = hop_page_meta($selectedService, $summary, $pageKind);
 $pageJsonLd = hop_page_json_ld($pageMeta, $selectedService);
 ?>
 <!doctype html>
@@ -816,6 +827,8 @@ $pageJsonLd = hop_page_json_ld($pageMeta, $selectedService);
     :root[data-theme="dark"][data-accessibility="true"] .brand-logo { content: url("/kolej-live-logo-dark.svg"); }
     .brand span { max-width: 360px; font-size: clamp(15px, 2vw, 18px); line-height: 1.15; font-weight: 760; letter-spacing: 0; }
     .top-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; flex-wrap: wrap; }
+    .top-link { min-height: 38px; display: inline-flex; align-items: center; justify-content: center; padding: 0 12px; color: var(--ink); text-decoration: none; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-size: 13px; font-weight: 820; }
+    .top-link:hover { color: var(--red); border-color: rgba(199, 34, 42, .45); }
     .parent-service { display: grid; justify-items: end; gap: 2px; color: var(--muted); font-size: 12px; font-weight: 720; }
     .parent-service a { color: var(--ink); text-decoration: none; font-size: 16px; font-weight: 820; }
     .parent-service a:hover { color: var(--red); }
@@ -869,6 +882,7 @@ $pageJsonLd = hop_page_json_ld($pageMeta, $selectedService);
     .service-card { min-height: 74px; display: grid; align-content: space-between; gap: 8px; padding: 12px; color: var(--ink); text-decoration: none; border: 1px solid var(--line); border-radius: 8px; background: var(--soft); font-weight: 760; }
     .service-card:hover { border-color: rgba(199, 34, 42, .45); box-shadow: 0 8px 22px rgba(22, 30, 42, .08); }
     .service-card-name { line-height: 1.25; }
+    .all-services-grid { margin-top: 16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
     .service-card-value { color: var(--red); font-weight: 860; white-space: nowrap; }
     .cookie-notice { position: fixed; z-index: 50; right: 18px; bottom: 18px; width: min(460px, calc(100% - 36px)); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 14px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); }
     .cookie-notice strong { display: block; margin-bottom: 3px; font-size: 14px; }
@@ -909,6 +923,7 @@ $pageJsonLd = hop_page_json_ld($pageMeta, $selectedService);
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></svg>
           </button>
         </div>
+        <a class="top-link" href="https://hop.kolej.live/?pociagi=wszystkie"><?= e(hop_t('hop.nav.all_trains')) ?></a>
         <div class="parent-service">
           <span><?= e(hop_t('hop.parent_service.note')) ?></span>
           <a href="https://kolej.live/"><?= e(hop_t('hop.parent_service.link')) ?></a>
@@ -923,6 +938,22 @@ $pageJsonLd = hop_page_json_ld($pageMeta, $selectedService);
 
     <?php if ($error !== null): ?>
       <div class="error"><?= e(hop_t('hop.errors.data_read', ['details' => $error])) ?></div>
+    <?php elseif ($showAllServices): ?>
+      <section class="panel">
+        <h2><?= e(hop_t('hop.all_trains.title')) ?></h2>
+        <div class="hint"><?= e(hop_t('hop.all_trains.body')) ?></div>
+        <?php if ($services === []): ?>
+          <div class="hint"><?= e(hop_t('hop.all_trains.empty')) ?></div>
+        <?php else: ?>
+          <div class="service-grid all-services-grid">
+            <?php foreach ($services as $service): ?>
+              <a class="service-card" href="<?= e(hop_page_service_url($service)) ?>">
+                <span class="service-card-name"><?= e(hop_page_service_label($service)) ?></span>
+              </a>
+            <?php endforeach; ?>
+          </div>
+        <?php endif; ?>
+      </section>
     <?php elseif ($selected === null): ?>
       <section class="panel">
         <form class="controls" method="get" data-service-form>
@@ -1036,7 +1067,7 @@ $pageJsonLd = hop_page_json_ld($pageMeta, $selectedService);
       </section>
     <?php endif; ?>
 
-    <?php if ($error === null): ?>
+    <?php if ($error === null && !$showAllServices): ?>
       <section class="popular-panel" aria-label="<?= e(hop_t('hop.popular.aria')) ?>">
         <h2><?= e(hop_t('hop.popular.title')) ?></h2>
         <?php if ($popularServices === []): ?>
