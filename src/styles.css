@@ -50,20 +50,26 @@
 }
 
 :root[data-accessibility="true"] {
-  --muted: #303846;
-  --line: #7b8797;
-  --line-strong: #596579;
-  --red: #a8111d;
-  --green: #006b45;
-  --focus: 0 0 0 4px rgba(168, 17, 29, 0.32);
-}
-
-:root[data-theme="dark"][data-accessibility="true"] {
-  --muted: #d1d7e0;
-  --line: #6d7a8c;
-  --line-strong: #93a0b2;
-  --red: #ff7b84;
-  --green: #72e7ae;
+  color-scheme: dark;
+  background: #050505;
+  color: #fff8c9;
+  --bg: #050505;
+  --ink: #fff8c9;
+  --muted: #ffe88a;
+  --soft: #111003;
+  --soft-2: #211d05;
+  --line: #8f7d1f;
+  --line-strong: #f4d23c;
+  --red: #ffd400;
+  --red-dark: #ffe66a;
+  --green: #fff08a;
+  --green-soft: rgba(255, 212, 0, 0.16);
+  --amber: #ffd400;
+  --amber-soft: rgba(255, 212, 0, 0.18);
+  --shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+  --surface: #0b0b06;
+  --surface-muted: #151303;
+  --focus: 0 0 0 4px rgba(255, 212, 0, 0.5);
 }
 
 * {
@@ -100,7 +106,7 @@ a {
 .topbar {
   min-height: 78px;
   display: grid;
-  grid-template-columns: auto minmax(340px, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, auto);
   align-items: center;
   gap: 20px;
   padding: 10px 0 14px;
@@ -128,6 +134,10 @@ a {
 }
 
 :root[data-theme="dark"] .brand-logo {
+  content: url("/kolej-live-logo-dark.svg");
+}
+
+:root[data-accessibility="true"] .brand-logo {
   content: url("/kolej-live-logo-dark.svg");
 }
 
@@ -252,6 +262,7 @@ a {
   justify-content: flex-end;
   gap: 8px;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .locale-control {
@@ -467,16 +478,17 @@ a {
 }
 
 .theme-controls button {
+  width: 34px;
+  min-width: 34px;
   min-height: 32px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 9px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
   color: var(--muted);
   background: transparent;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 0;
   font-weight: 760;
 }
 
@@ -486,6 +498,8 @@ a {
 }
 
 .theme-controls svg {
+  width: 17px;
+  height: 17px;
   color: currentColor;
 }
 
@@ -1370,6 +1384,8 @@ select:focus-visible {
 :root[data-accessibility="true"] .date-field,
 :root[data-accessibility="true"] .locale-control,
 :root[data-accessibility="true"] .theme-controls button {
+  width: 46px;
+  min-width: 46px;
   min-height: 46px;
 }
 

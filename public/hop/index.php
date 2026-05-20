@@ -771,17 +771,19 @@ $pageJsonLd = hop_page_json_ld($pageMeta, $selectedService);
       --focus: 0 0 0 3px rgba(255, 91, 102, .32);
     }
     :root[data-accessibility="true"] {
-      --muted: #303846;
-      --line: #7b8797;
-      --red: #a8111d;
-      --green: #006b45;
-      --focus: 0 0 0 4px rgba(168, 17, 29, .32);
-    }
-    :root[data-theme="dark"][data-accessibility="true"] {
-      --muted: #d1d7e0;
-      --line: #6d7a8c;
-      --red: #ff7b84;
-      --green: #72e7ae;
+      color-scheme: dark;
+      --bg: #050505;
+      --ink: #fff8c9;
+      --muted: #ffe88a;
+      --line: #8f7d1f;
+      --soft: #111003;
+      --surface: #0b0b06;
+      --surface-muted: #151303;
+      --red: #ffd400;
+      --green: #fff08a;
+      --amber: #ffd400;
+      --shadow: 0 24px 70px rgba(0, 0, 0, .5);
+      --focus: 0 0 0 4px rgba(255, 212, 0, .5);
     }
     * { box-sizing: border-box; }
     body { margin: 0; color: var(--ink); background: linear-gradient(180deg, var(--bg), var(--bg) 52%, var(--soft)); }
@@ -790,13 +792,15 @@ $pageJsonLd = hop_page_json_ld($pageMeta, $selectedService);
     .brand { display: flex; align-items: center; gap: 14px; color: var(--ink); text-decoration: none; }
     .brand-logo { width: 196px; height: auto; display: block; }
     :root[data-theme="dark"] .brand-logo { content: url("/kolej-live-logo-dark.svg"); }
+    :root[data-accessibility="true"] .brand-logo { content: url("/kolej-live-logo-dark.svg"); }
     .brand span { max-width: 360px; font-size: clamp(15px, 2vw, 18px); line-height: 1.15; font-weight: 760; letter-spacing: 0; }
     .top-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; flex-wrap: wrap; }
     .parent-service { display: grid; justify-items: end; gap: 2px; color: var(--muted); font-size: 12px; font-weight: 720; }
     .parent-service a { color: var(--ink); text-decoration: none; font-size: 16px; font-weight: 820; }
     .parent-service a:hover { color: var(--red); }
     .theme-controls { display: inline-flex; gap: 6px; padding: 3px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
-    .theme-controls button { min-height: 32px; display: inline-flex; align-items: center; gap: 6px; padding: 0 9px; color: var(--muted); background: transparent; border-radius: 6px; font-size: 12px; font-weight: 760; }
+    .theme-controls button { width: 34px; min-width: 34px; min-height: 32px; display: inline-grid; place-items: center; padding: 0; color: var(--muted); background: transparent; border-radius: 6px; font-size: 0; font-weight: 760; }
+    .theme-controls button svg { width: 17px; height: 17px; color: currentColor; }
     .theme-controls button.active { color: #fff; background: var(--red); }
     .hero { display: grid; gap: 10px; padding: 24px 0 18px; }
     h1 { margin: 0; font-size: clamp(28px, 4vw, 44px); line-height: 1; letter-spacing: 0; }
@@ -852,6 +856,7 @@ $pageJsonLd = hop_page_json_ld($pageMeta, $selectedService);
     .cookie-notice[hidden] { display: none; }
     button:focus-visible, a:focus-visible, input:focus-visible { outline: 0; box-shadow: var(--focus); }
     :root[data-accessibility="true"] body { font-size: 18px; }
+    :root[data-accessibility="true"] .theme-controls button { width: 46px; min-width: 46px; }
     :root[data-accessibility="true"] button,
     :root[data-accessibility="true"] .service-search { min-height: 46px; }
     @media (max-width: 820px) {
@@ -875,8 +880,13 @@ $pageJsonLd = hop_page_json_ld($pageMeta, $selectedService);
       </a>
       <div class="top-actions">
         <div class="theme-controls" aria-label="<?= e(hop_t('hop.theme.aria')) ?>">
-          <button type="button" data-theme-toggle><?= e(hop_t('hop.theme.dark')) ?></button>
-          <button type="button" data-accessibility-toggle><?= e(hop_t('hop.theme.accessibility')) ?></button>
+          <button type="button" data-theme-toggle aria-label="<?= e(hop_t('hop.theme.dark')) ?>" title="<?= e(hop_t('hop.theme.dark')) ?>">
+            <svg data-icon="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.3 14.8A8.2 8.2 0 0 1 9.2 3.7 8.8 8.8 0 1 0 20.3 14.8Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg data-icon="sun" viewBox="0 0 24 24" aria-hidden="true" hidden><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+          <button type="button" data-accessibility-toggle aria-label="<?= e(hop_t('hop.theme.accessibility')) ?>" title="<?= e(hop_t('hop.theme.accessibility')) ?>">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+          </button>
         </div>
         <div class="parent-service">
           <span><?= e(hop_t('hop.parent_service.note')) ?></span>
@@ -1092,9 +1102,16 @@ $pageJsonLd = hop_page_json_ld($pageMeta, $selectedService);
         var dark = document.documentElement.dataset.theme === 'dark';
         var accessible = document.documentElement.dataset.accessibility === 'true';
         if (themeToggle) {
-          themeToggle.textContent = dark ? lightLabel : darkLabel;
+          themeToggle.setAttribute('aria-label', dark ? lightLabel : darkLabel);
+          themeToggle.setAttribute('title', dark ? lightLabel : darkLabel);
           themeToggle.classList.toggle('active', dark);
           themeToggle.setAttribute('aria-pressed', dark ? 'true' : 'false');
+          var moonIcon = themeToggle.querySelector('[data-icon="moon"]');
+          var sunIcon = themeToggle.querySelector('[data-icon="sun"]');
+          if (moonIcon && sunIcon) {
+            moonIcon.hidden = dark;
+            sunIcon.hidden = !dark;
+          }
         }
         if (accessibilityToggle) {
           accessibilityToggle.classList.toggle('active', accessible);

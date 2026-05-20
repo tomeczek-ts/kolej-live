@@ -863,20 +863,22 @@ function ThemeControls({
       <button
         type="button"
         className={dark ? "active" : ""}
+        aria-label={dark ? t("theme.light") : t("theme.dark")}
+        title={dark ? t("theme.light") : t("theme.dark")}
         aria-pressed={dark}
         onClick={() => setTheme(dark ? "light" : "dark")}
       >
         {dark ? <Sun size={16} /> : <Moon size={16} />}
-        <span>{dark ? t("theme.light") : t("theme.dark")}</span>
       </button>
       <button
         type="button"
         className={accessibility ? "active" : ""}
+        aria-label={t("theme.accessibility")}
+        title={t("theme.accessibility")}
         aria-pressed={accessibility}
         onClick={() => setAccessibility(!accessibility)}
       >
         <Eye size={16} />
-        <span>{t("theme.accessibility")}</span>
       </button>
     </div>
   );
