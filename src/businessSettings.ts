@@ -22,4 +22,9 @@ export const stationBoardSettings = {
 
 export const delayThresholds = businessSettings.delayThresholds;
 
+export const seoLinksSettings = {
+  recentLinksLimit: businessSettings.search.recentLinksLimit,
+  randomLinksLimit: businessSettings.search.randomLinksLimit,
+};
+
 export const googleTagId = businessSettings.googleTagId;

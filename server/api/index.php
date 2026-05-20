@@ -212,11 +212,13 @@ function translationsEndpoint(): array
 
 function seoLinksEndpoint(): array
 {
-    $recent = recentSeoLinks(4);
-    $random = randomSeoLinks(6, array_column($recent, 'href'));
+    $recentLimit = business_setting_int('search.recentLinksLimit', 10, 1, 30);
+    $randomLimit = business_setting_int('search.randomLinksLimit', 6, 0, 30);
+    $recent = recentSeoLinks($recentLimit);
+    $random = randomSeoLinks($randomLimit, array_column($recent, 'href'));
 
     return [
-        'links' => array_slice(array_merge($recent, $random), 0, 10),
+        'links' => array_slice(array_merge($recent, $random), 0, $recentLimit),
         'recent' => $recent,
         'random' => $random,
         'generatedAt' => gmdate(DATE_ATOM),

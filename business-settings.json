@@ -12,6 +12,8 @@
     "defaultMode": "auto",
     "stationLimit": 10,
     "trainLimit": 14,
+    "recentLinksLimit": 10,
+    "randomLinksLimit": 6,
     "suggestionTypes": ["station", "train"],
     "defaultStations": [
       { "type": "station", "label": "Warszawa Centralna", "subtitle": "Stacja", "value": "Warszawa Centralna", "stationId": 5100069 },

@@ -30,6 +30,7 @@ import {
   defaultSearchMode,
   delayThresholds,
   googleTagId,
+  seoLinksSettings,
   stationBoardSettings,
 } from "./businessSettings";
 import {
@@ -1077,7 +1078,7 @@ function SeoLinksPanel({ links, t, onSeoLink }: { links: SeoLink[]; t: Translate
       </div>
       {links.length ? (
         <div className="seo-link-list">
-          {links.slice(0, 10).map((link) => (
+          {links.slice(0, seoLinksSettings.recentLinksLimit).map((link) => (
             <a className="seo-link-row" href={link.href} onClick={(event) => onSeoLink(event, link)} key={`${link.source}-${link.type}-${link.href}`}>
               {link.type === "train" ? <TrainFront size={16} /> : <MapPin size={16} />}
               <span>
