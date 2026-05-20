@@ -23,7 +23,7 @@ import {
   Wifi,
   X,
 } from "lucide-react";
-import type { FormEvent, MouseEvent, ReactNode } from "react";
+import type { FormEvent, MouseEvent, ReactNode, TouchEvent, WheelEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { api, AppApiError } from "./api";
 import {
@@ -81,6 +81,7 @@ type ThemeMode = "light" | "dark";
 const today = new Date().toISOString().slice(0, 10);
 const defaultQuery = "";
 const pastBoardLimit = 5;
+const pastBoardPageSize = 10;
 const boardDayMs = 24 * 60 * 60 * 1000;
 const initialRoute = routeFromLocation(window.location);
 const initialDate = initialRoute?.date ?? today;
@@ -783,12 +784,12 @@ export default function App() {
             />
           ) : view === "route" ? (
             train ? (
-              <TrainDetail train={train} onBackToStation={() => setView(station ? "status" : "route")} onStation={loadStation} t={t} dateTimeLocale={dateTimeLocale} />
+              <TrainDetail train={train} contextStation={station?.station ?? null} onStation={loadStation} t={t} dateTimeLocale={dateTimeLocale} />
             ) : (
               <RoutePrompt search={search} loading={loading === "train"} onTrain={loadTrain} t={t} />
             )
           ) : train && !station ? (
-            <TrainDetail train={train} onBackToStation={() => setTrain(null)} onStation={loadStation} t={t} dateTimeLocale={dateTimeLocale} />
+            <TrainDetail train={train} contextStation={null} onStation={loadStation} t={t} dateTimeLocale={dateTimeLocale} />
           ) : station ? (
             <StationBoard
               station={station}
@@ -1162,15 +1163,18 @@ function StationBoard({
   dateTimeLocale: string;
 }) {
   const [currentTime, setCurrentTime] = useState(() => Date.now());
+  const [pastLimit, setPastLimit] = useState(pastBoardLimit);
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
 
   useEffect(() => {
     setCurrentTime(Date.now());
+    setPastLimit(pastBoardLimit);
     const interval = window.setInterval(() => setCurrentTime(Date.now()), 60 * 1000);
 
     return () => window.clearInterval(interval);
-  }, [station.date, station.station.id]);
+  }, [station.date, station.station.id, boardKind]);
 
-  const visibleBoard = useMemo(() => {
+  const boardState = useMemo(() => {
     const dayStart = timestampFromDateOnly(station.date);
     const dayEnd = dayStart + boardDayMs;
     const splitTime = Math.min(Math.max(currentTime, dayStart), dayEnd);
@@ -1184,15 +1188,42 @@ function StationBoard({
     const past = timedItems
       .filter((entry) => entry.boardTimestamp < splitTime)
       .sort((a, b) => b.boardTimestamp - a.boardTimestamp)
-      .slice(0, pastBoardLimit)
+      .slice(0, pastLimit)
       .sort((a, b) => a.boardTimestamp - b.boardTimestamp);
 
     const future = timedItems
       .filter((entry) => entry.boardTimestamp >= splitTime)
       .sort((a, b) => a.boardTimestamp - b.boardTimestamp);
 
-    return [...past, ...future].map((entry) => entry.item);
-  }, [boardKind, currentTime, station.board, station.date]);
+    const pastTotal = timedItems.filter((entry) => entry.boardTimestamp < splitTime).length;
+
+    return {
+      visibleItems: [...past, ...future].map((entry) => entry.item),
+      hiddenPastCount: Math.max(0, pastTotal - past.length),
+      pastTotal,
+    };
+  }, [boardKind, currentTime, pastLimit, station.board, station.date]);
+
+  const loadEarlierBoardItems = () => {
+    if (boardState.hiddenPastCount <= 0) return;
+    setPastLimit((current) => Math.min(current + pastBoardPageSize, boardState.pastTotal));
+  };
+
+  const handleBoardWheel = (event: WheelEvent<HTMLDivElement>) => {
+    if (event.deltaY < 0) {
+      loadEarlierBoardItems();
+    }
+  };
+
+  const handleBoardTouchMove = (event: TouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0];
+    if (!touch || touchStartY === null) return;
+
+    if (touch.clientY - touchStartY > 34) {
+      loadEarlierBoardItems();
+      setTouchStartY(touch.clientY);
+    }
+  };
 
   return (
     <>
@@ -1216,7 +1247,13 @@ function StationBoard({
       {loading ? (
         <PanelLoader label={t("loading.board")} />
       ) : (
-        <div className="board-table">
+        <div
+          className="board-table"
+          onWheel={handleBoardWheel}
+          onTouchStart={(event) => setTouchStartY(event.touches[0]?.clientY ?? null)}
+          onTouchMove={handleBoardTouchMove}
+          onTouchEnd={() => setTouchStartY(null)}
+        >
           <div className="board-head">
             <span>{t("board.time")}</span>
             <span>{t("board.train")}</span>
@@ -1224,8 +1261,13 @@ function StationBoard({
             <span>{t("board.platform")}</span>
             <span>{t("board.status")}</span>
           </div>
-          {visibleBoard.length ? (
-            visibleBoard.map((item) => <BoardRow item={item} key={item.id} onTrain={onTrain} t={t} dateTimeLocale={dateTimeLocale} />)
+          {boardState.hiddenPastCount > 0 && (
+            <button className="load-older-row" type="button" onClick={loadEarlierBoardItems}>
+              {t("board.loadEarlier", { count: Math.min(pastBoardPageSize, boardState.hiddenPastCount) })}
+            </button>
+          )}
+          {boardState.visibleItems.length ? (
+            boardState.visibleItems.map((item) => <BoardRow item={item} key={item.id} onTrain={onTrain} t={t} dateTimeLocale={dateTimeLocale} />)
           ) : (
             <div className="empty-line">{t("board.empty")}</div>
           )}
@@ -1415,18 +1457,21 @@ function TrainListView({
 
 function TrainDetail({
   train,
-  onBackToStation,
+  contextStation,
   onStation,
   t,
   dateTimeLocale,
 }: {
   train: TrainResponse;
-  onBackToStation: () => void;
+  contextStation: StationSuggestion | null;
   onStation: (station: StationSuggestion) => void;
   t: TranslateFn;
   dateTimeLocale: string;
 }) {
   const maxDelay = train.timeline.reduce((value, stop) => Math.max(value, stop.arrivalDelayMinutes ?? 0, stop.departureDelayMinutes ?? 0), 0);
+  const firstStop = train.timeline[0] ?? null;
+  const stationAction = contextStation ?? (firstStop ? { id: firstStop.stationId, name: firstStop.stationName } : null);
+  const stationActionLink = stationAction ? stationSeoLink(stationAction) : null;
 
   return (
     <>
@@ -1437,10 +1482,20 @@ function TrainDetail({
         </div>
         <div className="train-actions">
           <StatusBadge status={train.status} t={t} />
-          <button className="ghost-button compact" type="button" onClick={onBackToStation}>
-            <MapPin size={16} />
-            {t("detail.station")}
-          </button>
+          {stationAction && stationActionLink && (
+            <a
+              className="ghost-button compact"
+              href={stationActionLink.href}
+              title={stationAction.name}
+              onClick={(event) => {
+                event.preventDefault();
+                onStation(stationAction);
+              }}
+            >
+              <MapPin size={16} />
+              {contextStation ? t("train.contextStationLink") : t("train.originStationLink")}
+            </a>
+          )}
         </div>
       </div>
 
@@ -1455,6 +1510,7 @@ function TrainDetail({
           const delay = stop.departureDelayMinutes ?? stop.arrivalDelayMinutes;
           const planned = stop.plannedDeparture ?? stop.plannedArrival;
           const actual = stop.actualDeparture ?? stop.actualArrival;
+          const actualLabel = stop.isConfirmed ? t("train.actualShort") : t("train.forecastShort");
           const stationLink = stationSeoLink({ id: stop.stationId, name: stop.stationName });
 
           return (
@@ -1490,7 +1546,7 @@ function TrainDetail({
                   </span>
                   {actual && (
                     <span>
-                      {t("train.actualShort")} {formatClock(actual, dateTimeLocale)}
+                      {actualLabel} {formatClock(actual, dateTimeLocale)}
                     </span>
                   )}
                 </div>

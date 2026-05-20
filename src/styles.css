@@ -615,6 +615,7 @@ a {
   cursor: pointer;
   font-size: 14px;
   font-weight: 720;
+  text-decoration: none;
 }
 
 .ghost-button.compact {
@@ -936,6 +937,26 @@ a {
 
 .board-row:last-child {
   border-bottom: 0;
+}
+
+.load-older-row {
+  width: 100%;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  color: var(--red-dark);
+  background: var(--soft);
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 820;
+}
+
+.load-older-row:hover {
+  background: var(--soft-2);
 }
 
 .time-cell,
@@ -1465,10 +1486,22 @@ select:focus-visible {
 
   .stats-strip {
     justify-content: flex-start;
+    max-width: 100%;
+  }
+
+  .stat {
+    min-width: 0;
+    flex: 1 1 calc(50% - 8px);
+    white-space: normal;
+  }
+
+  .stat strong {
+    margin-left: auto;
   }
 
   .topbar-actions {
     justify-content: flex-start;
+    max-width: 100%;
   }
 
   .main-nav button,
@@ -1483,6 +1516,15 @@ select:focus-visible {
 
   .search-field input {
     font-size: 16px;
+  }
+
+  .date-field {
+    max-width: 100%;
+  }
+
+  .date-field input {
+    width: 96px;
+    max-width: calc(100vw - 250px);
   }
 
   .workspace {
@@ -1505,12 +1547,80 @@ select:focus-visible {
   }
 
   .board-table {
-    overflow-x: auto;
+    overflow-x: visible;
   }
 
-  .board-head,
+  .board-head {
+    display: none;
+  }
+
   .board-row {
-    min-width: 820px;
+    min-width: 0;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "time train status"
+      "route route route"
+      "platform platform platform";
+    gap: 9px 10px;
+    align-items: start;
+    padding: 12px;
+  }
+
+  .time-cell {
+    grid-area: time;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .time-cell strong {
+    font-size: 20px;
+  }
+
+  .train-cell {
+    grid-area: train;
+    align-items: flex-start;
+  }
+
+  .train-cell strong {
+    line-height: 1.2;
+  }
+
+  .direction-cell {
+    grid-area: route;
+  }
+
+  .board-route-summary {
+    width: 100%;
+    padding: 8px;
+    background: var(--soft);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+
+  .board-route-summary > span {
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+  }
+
+  .board-route-summary span span {
+    overflow: visible;
+    white-space: normal;
+  }
+
+  .platform-cell {
+    grid-area: platform;
+    align-items: baseline;
+    flex-direction: row;
+    gap: 8px;
+  }
+
+  .status-cell {
+    grid-area: status;
+    justify-content: flex-end;
+  }
+
+  .load-older-row {
+    min-height: 46px;
   }
 
   .demo-ribbon,

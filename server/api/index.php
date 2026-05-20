@@ -1101,7 +1101,7 @@ function boardItem(string $kind, array $summary, int $stationId, string $planned
         }
     }
 
-    $delayMinutes = delayMinutesFromPdp($delay, $actualTime);
+    $delayMinutes = delayMinutesFromPdp($delay, $actualTime, $plannedTime);
 
     return [
         'id' => $summary['scheduleId'] . '-' . $summary['orderId'] . '-' . $stationId . '-' . $kind . '-' . substr(sha1($plannedTime), 0, 8),
@@ -1143,17 +1143,19 @@ function buildTrainTimeline(array $route, array $operation, array $stationMap, s
         $liveStop = operationStopForStation(['stations' => $operationStops], $stationId, $plannedStop['orderNumber'] ?? null);
         $actualArrival = $liveStop['actualArrival'] ?? null;
         $actualDeparture = $liveStop['actualDeparture'] ?? null;
+        $plannedArrival = plannedDateTime($date, $plannedStop['arrivalTime'] ?? null, $plannedStop['arrivalDay'] ?? 0);
+        $plannedDeparture = plannedDateTime($date, $plannedStop['departureTime'] ?? null, $plannedStop['departureDay'] ?? 0);
 
         $items[] = [
             'stationId' => $stationId,
             'stationName' => stationNameFromAnyDictionary($stationMap, $stationId) ?? ('Stacja ' . $stationId),
             'orderNumber' => (int) ($plannedStop['orderNumber'] ?? 0),
-            'plannedArrival' => plannedDateTime($date, $plannedStop['arrivalTime'] ?? null, $plannedStop['arrivalDay'] ?? 0),
-            'plannedDeparture' => plannedDateTime($date, $plannedStop['departureTime'] ?? null, $plannedStop['departureDay'] ?? 0),
+            'plannedArrival' => $plannedArrival,
+            'plannedDeparture' => $plannedDeparture,
             'actualArrival' => $actualArrival,
             'actualDeparture' => $actualDeparture,
-            'arrivalDelayMinutes' => delayMinutesFromPdp($liveStop['arrivalDelayMinutes'] ?? null, $actualArrival),
-            'departureDelayMinutes' => delayMinutesFromPdp($liveStop['departureDelayMinutes'] ?? null, $actualDeparture),
+            'arrivalDelayMinutes' => delayMinutesFromPdp($liveStop['arrivalDelayMinutes'] ?? null, $actualArrival, $plannedArrival),
+            'departureDelayMinutes' => delayMinutesFromPdp($liveStop['departureDelayMinutes'] ?? null, $actualDeparture, $plannedDeparture),
             'platform' => cleanNullable($plannedStop['departurePlatform'] ?? $plannedStop['arrivalPlatform'] ?? null),
             'track' => cleanNullable($plannedStop['departureTrack'] ?? $plannedStop['arrivalTrack'] ?? null),
             'isConfirmed' => (bool) ($liveStop['isConfirmed'] ?? false),
@@ -1479,14 +1481,62 @@ function delayLabel(?int $delay): string
     return '+' . $delay . ' min';
 }
 
-function delayMinutesFromPdp($delay, $actualTime): ?int
+function delayMinutesFromPdp($delay, $actualTime, $plannedTime = null): ?int
 {
     $numericDelay = numericOrNull($delay);
     if ($numericDelay !== null) {
         return $numericDelay;
     }
 
-    return cleanNullable($actualTime) !== null ? 0 : null;
+    $actual = cleanNullable($actualTime);
+    if ($actual === null) {
+        return null;
+    }
+
+    $calculatedDelay = delayMinutesFromActualAndPlanned($actual, cleanNullable($plannedTime));
+    if ($calculatedDelay !== null) {
+        return $calculatedDelay;
+    }
+
+    return 0;
+}
+
+function delayMinutesFromActualAndPlanned(string $actualTime, ?string $plannedTime): ?int
+{
+    if ($plannedTime === null) {
+        return null;
+    }
+
+    $actual = parsePdpDateTime($actualTime);
+    $planned = parsePdpDateTime($plannedTime);
+    if ($actual === null || $planned === null) {
+        return null;
+    }
+
+    $diffSeconds = $actual->getTimestamp() - $planned->getTimestamp();
+    if ($diffSeconds <= 0) {
+        return 0;
+    }
+
+    return (int) ceil($diffSeconds / 60);
+}
+
+function parsePdpDateTime(string $value): ?DateTimeImmutable
+{
+    $value = trim($value);
+    if ($value === '') {
+        return null;
+    }
+
+    try {
+        if (preg_match('/(?:Z|[+-]\d{2}:?\d{2})$/i', $value)) {
+            return new DateTimeImmutable($value);
+        }
+
+        return new DateTimeImmutable($value, new DateTimeZone('Europe/Warsaw'));
+    } catch (Throwable $exception) {
+        return null;
+    }
 }
 
 function stationDictionaryMap(PdpClient $client): array
