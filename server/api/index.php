@@ -853,10 +853,27 @@ function recentSeoLinks(int $limit): array
 
 function mixedSeoLinks(array $recent, array $random, int $limit): array
 {
-    $links = array_merge($recent, $random);
-    shuffle($links);
+    $links = array_fill(0, $limit, null);
+    $randomPositions = range(0, $limit - 1);
+    shuffle($randomPositions);
+    $randomPositions = array_slice($randomPositions, 0, min(count($random), $limit));
+    sort($randomPositions);
 
-    return array_slice($links, 0, $limit);
+    foreach ($randomPositions as $index => $position) {
+        $links[$position] = $random[$index];
+    }
+
+    $recentIndex = 0;
+    foreach ($links as $position => $link) {
+        if ($link !== null || !isset($recent[$recentIndex])) {
+            continue;
+        }
+
+        $links[$position] = $recent[$recentIndex];
+        $recentIndex++;
+    }
+
+    return array_values(array_filter($links));
 }
 
 function randomSeoLinks(int $limit, array $excludeHrefs = []): array
