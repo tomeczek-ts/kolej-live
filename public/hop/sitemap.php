@@ -13,6 +13,7 @@ $urls = [
     ['loc' => $baseUrl . '/', 'priority' => '1.0', 'lastmod' => $today],
     ['loc' => $baseUrl . '/?pociagi=wszystkie', 'priority' => '0.9', 'lastmod' => $today],
 ];
+$seoPriority = '0.7';
 
 $databasePath = hop_public_api_path('hop/Database.php');
 if ($databasePath !== null) {
@@ -40,8 +41,8 @@ if (function_exists('hop_pdo')) {
             }
 
             $urls[] = [
-                'loc' => $baseUrl . '/?historia_opoznien=' . rawurlencode(hop_sitemap_slug($label)),
-                'priority' => '0.8',
+                'loc' => $baseUrl . '/historia_opoznien/' . rawurlencode(hop_sitemap_slug($label)),
+                'priority' => $seoPriority,
                 'lastmod' => hop_sitemap_clean($row['lastmod'] ?? null) ?? $today,
             ];
         }

@@ -103,6 +103,20 @@ function hop_page_service_key_from_slug(array $services, string $requestedSlug):
     return null;
 }
 
+function hop_page_slug_from_path(): string
+{
+    $path = parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
+    if (!is_string($path)) {
+        return '';
+    }
+
+    if (preg_match('~^/historia_opoznien/([^/]+)/?$~', $path, $matches) !== 1) {
+        return '';
+    }
+
+    return trim(rawurldecode($matches[1]));
+}
+
 function hop_page_service_options(array $services): array
 {
     return array_map(static function (array $service): array {
@@ -125,7 +139,7 @@ function hop_page_canonical_url(?array $service = null, string $pageKind = 'home
         return $baseUrl;
     }
 
-    return $baseUrl . '?historia_opoznien=' . rawurlencode(hop_page_service_slug($service));
+    return $baseUrl . 'historia_opoznien/' . rawurlencode(hop_page_service_slug($service));
 }
 
 function hop_page_service_url(array $service): string
@@ -640,7 +654,10 @@ try {
     hop_page_ensure_search_table($pdo);
     hop_page_ensure_daily_random_table($pdo);
     $services = hop_page_services($pdo);
-    $requestedSlug = isset($_GET['historia_opoznien']) && !is_array($_GET['historia_opoznien']) ? trim((string) $_GET['historia_opoznien']) : '';
+    $requestedSlug = hop_page_slug_from_path();
+    if ($requestedSlug === '') {
+        $requestedSlug = isset($_GET['historia_opoznien']) && !is_array($_GET['historia_opoznien']) ? trim((string) $_GET['historia_opoznien']) : '';
+    }
     $legacyServiceKey = isset($_GET['service']) && !is_array($_GET['service']) ? (string) $_GET['service'] : '';
     $serviceKeys = array_column($services, 'service_key');
     $selected = $requestedSlug !== '' ? hop_page_service_key_from_slug($services, $requestedSlug) : null;
@@ -1256,9 +1273,7 @@ $pageJsonLd = hop_page_json_ld($pageMeta, $selectedService);
       }
 
       function serviceUrl(slug) {
-        var url = new URL(canonicalBaseUrl);
-        url.searchParams.set('historia_opoznien', slug);
-        return url.toString();
+        return canonicalBaseUrl.replace(/\/$/, '') + '/historia_opoznien/' + encodeURIComponent(slug);
       }
 
       function navigateWhenReady() {

@@ -9,6 +9,11 @@ if (!is_file($dataFiles)) {
 
 require $dataFiles;
 
+$businessSettings = dirname($dataFiles) . '/BusinessSettings.php';
+if (is_file($businessSettings)) {
+    require_once $businessSettings;
+}
+
 header('Content-Type: application/xml; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 
@@ -24,19 +29,42 @@ $urls = [
     ['loc' => $hopBaseUrl . '/?pociagi=wszystkie', 'priority' => '0.7'],
     ['loc' => $hopBaseUrl . '/sitemap.xml', 'priority' => '0.4'],
 ];
+$seoPriority = '0.7';
 
 $stations = sitemap_items('stations.json');
 foreach ($stations as $station) {
     $id = (int) ($station['id'] ?? 0);
     $name = sitemap_clean($station['name'] ?? null);
-    if ($id <= 0 || $name === null || !sitemap_is_public_station_name($name)) {
+    if ($id <= 0 || !sitemap_is_public_station_id($id) || $name === null || !sitemap_is_public_station_name($name)) {
         continue;
     }
 
     $urls[] = [
-        'loc' => $baseUrl . '/?stacja=' . rawurlencode(sitemap_slug($name)) . '&id_stacji=' . $id,
-        'priority' => '0.8',
+        'loc' => $baseUrl . '/stacja/' . rawurlencode(sitemap_slug($name)) . '/id_stacji/' . $id,
+        'priority' => $seoPriority,
     ];
+}
+
+if (function_exists('business_setting')) {
+    $defaultStations = business_setting('search.defaultStations', []);
+    if (is_array($defaultStations)) {
+        foreach ($defaultStations as $station) {
+            if (!is_array($station)) {
+                continue;
+            }
+
+            $id = (int) ($station['stationId'] ?? $station['id'] ?? 0);
+            $name = sitemap_clean($station['label'] ?? $station['value'] ?? null);
+            if ($id <= 0 || !sitemap_is_public_station_id($id) || $name === null || !sitemap_is_public_station_name($name)) {
+                continue;
+            }
+
+            $urls[] = [
+                'loc' => $baseUrl . '/stacja/' . rawurlencode(sitemap_slug($name)) . '/id_stacji/' . $id,
+                'priority' => $seoPriority,
+            ];
+        }
+    }
 }
 
 $trains = sitemap_items('trains-' . $today . '.json');
@@ -46,11 +74,11 @@ foreach ($trains as $train) {
         continue;
     }
 
-    $url = $baseUrl . '/?pociag=' . rawurlencode(sitemap_slug($label));
+    $url = $baseUrl . '/pociag/' . rawurlencode(sitemap_slug($label));
 
     $urls[] = [
         'loc' => $url,
-        'priority' => '0.7',
+        'priority' => $seoPriority,
     ];
 }
 
@@ -63,14 +91,14 @@ foreach (sitemap_hop_services(20000) as $service) {
     $lastmod = sitemap_clean($service['lastmod'] ?? null) ?? $today;
 
     $urls[] = [
-        'loc' => $baseUrl . '/?pociag=' . rawurlencode($slug),
-        'priority' => '0.65',
+        'loc' => $baseUrl . '/pociag/' . rawurlencode($slug),
+        'priority' => $seoPriority,
         'lastmod' => $lastmod,
     ];
 
     $urls[] = [
-        'loc' => $hopBaseUrl . '/?historia_opoznien=' . rawurlencode($slug),
-        'priority' => '0.7',
+        'loc' => $hopBaseUrl . '/historia_opoznien/' . rawurlencode($slug),
+        'priority' => $seoPriority,
         'lastmod' => $lastmod,
     ];
 }
@@ -148,6 +176,11 @@ function sitemap_is_public_station_name(string $name): bool
     $upper = function_exists('mb_strtoupper') ? mb_strtoupper($name, 'UTF-8') : strtoupper($name);
 
     return $name !== $upper;
+}
+
+function sitemap_is_public_station_id(int $stationId): bool
+{
+    return $stationId > 0 && !in_array($stationId, [5100069], true);
 }
 
 function sitemap_hop_services(int $limit): array

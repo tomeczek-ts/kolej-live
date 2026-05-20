@@ -20,7 +20,7 @@ export const demoSearch: SearchResponse = {
   demo: true,
   warnings: [],
   stations: [
-    { id: 5100069, name: "Warszawa Centralna" },
+    { id: 33605, name: "Warszawa Centralna" },
     { id: 5100071, name: "Warszawa Zachodnia" },
     { id: 5100067, name: "Warszawa Wschodnia" },
   ],
@@ -46,7 +46,7 @@ export const demoSearch: SearchResponse = {
 };
 
 export const demoStation: StationResponse = {
-  station: { id: 5100069, name: "Warszawa Centralna" },
+  station: { id: 33605, name: "Warszawa Centralna" },
   date: today,
   demo: true,
   generatedAt: new Date().toISOString(),
@@ -54,7 +54,7 @@ export const demoStation: StationResponse = {
     {
       id: "demo-ic-6104-dep",
       kind: "departure",
-      stationId: 5100069,
+      stationId: 33605,
       scheduleId: 25,
       orderId: 6104,
       operationOrderId: 6104,
@@ -82,7 +82,7 @@ export const demoStation: StationResponse = {
     {
       id: "demo-eic-3502-arr",
       kind: "arrival",
-      stationId: 5100069,
+      stationId: 33605,
       scheduleId: 25,
       orderId: 3502,
       operationOrderId: 3502,
@@ -110,7 +110,7 @@ export const demoStation: StationResponse = {
     {
       id: "demo-r-19316-dep",
       kind: "departure",
-      stationId: 5100069,
+      stationId: 33605,
       scheduleId: 25,
       orderId: 19316,
       operationOrderId: 19316,

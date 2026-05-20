@@ -1,4 +1,11 @@
 Options -Indexes
 RewriteEngine On
 
+RewriteCond %{QUERY_STRING} ^historia_opoznien=([^&]+)$ [NC]
+RewriteRule ^$ /historia_opoznien/%1? [R=301,L,NE]
+
 RewriteRule ^sitemap\.xml$ /sitemap.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.php [L]

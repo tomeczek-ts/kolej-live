@@ -107,7 +107,7 @@ export const api = {
         query: q,
         date,
         suggestions: [
-          { type: "station", label: "Warszawa Centralna", subtitle: "Stacja", value: "Warszawa Centralna", stationId: 5100069 },
+          { type: "station", label: "Warszawa Centralna", subtitle: "Stacja", value: "Warszawa Centralna", stationId: 33605 },
           {
             type: "train",
             label: demoTrain.train.label,

@@ -335,6 +335,9 @@ function stationEndpoint(PdpClient $client): array
     if ($stationId <= 0) {
         respond(422, ['error' => ['code' => 'station_required', 'message' => 'Brakuje parametru id stacji.']]);
     }
+    if (!isPublicStationId($stationId)) {
+        respond(404, ['error' => ['code' => 'station_not_supported', 'message' => 'Ta stacja nie jest dostÄ™pna w serwisie.']]);
+    }
 
     $schedules = pdp_schedules_for_station($client, $stationId, $date);
     $operations = pdp_operations_for_station($client, $stationId);
@@ -440,7 +443,7 @@ function stationSuggestions(PdpClient $client, string $query, int $limit): array
         $items = [];
 
         foreach ($cached as $station) {
-            if (!isset($station['id'], $station['name']) || !isPublicStationName((string) $station['name'])) {
+            if (!isset($station['id'], $station['name']) || !isPublicStationId((int) $station['id']) || !isPublicStationName((string) $station['name'])) {
                 continue;
             }
 
@@ -463,7 +466,7 @@ function stationSuggestions(PdpClient $client, string $query, int $limit): array
     $items = [];
 
     foreach ($stations as $station) {
-        if (!isset($station['id'], $station['name']) || !isPublicStationName((string) $station['name'])) {
+        if (!isset($station['id'], $station['name']) || !isPublicStationId((int) $station['id']) || !isPublicStationName((string) $station['name'])) {
             continue;
         }
 
@@ -480,7 +483,7 @@ function stationsWithCoordinates(PdpClient $client): array
 {
     $cachedCoordinates = station_coordinates_cached_items();
     if ($cachedCoordinates !== []) {
-        return array_values(array_filter($cachedCoordinates, static fn(array $station): bool => isPublicStationName((string) $station['name'])));
+        return array_values(array_filter($cachedCoordinates, static fn(array $station): bool => isPublicStationId((int) ($station['id'] ?? 0)) && isPublicStationName((string) $station['name'])));
     }
 
     $payload = data_read_json('stations.json');
@@ -507,7 +510,7 @@ function stationsWithCoordinates(PdpClient $client): array
         }
 
         $name = trim((string) $row['name']);
-        if (!isPublicStationName($name)) {
+        if (!isPublicStationId((int) $row['id']) || !isPublicStationName($name)) {
             continue;
         }
 
@@ -1018,12 +1021,15 @@ function defaultStationSeoLinks(string $source): array
         }
 
         $stationId = (int) ($station['stationId'] ?? $station['id'] ?? 0);
+        if ($stationId > 0 && !isPublicStationId($stationId)) {
+            continue;
+        }
         $slug = seoSlug($label);
         $links[] = [
             'type' => 'station',
             'label' => $label,
             'slug' => $slug,
-            'href' => $stationId > 0 ? ('/?stacja=' . rawurlencode($slug) . '&id_stacji=' . $stationId) : ('/?szukaj=' . rawurlencode($slug) . '&tryb=stacja'),
+            'href' => $stationId > 0 ? stationSeoHref($slug, $stationId) : ('/?szukaj=' . rawurlencode($slug) . '&tryb=stacja'),
             'subtitle' => 'Stacja',
             'source' => $source,
         ];
@@ -1036,7 +1042,7 @@ function stationSeoLinkFromRow(array $station, string $source): ?array
 {
     $id = (int) ($station['id'] ?? 0);
     $name = cleanNullable($station['name'] ?? null);
-    if ($id <= 0 || $name === null || !isPublicStationName($name)) {
+    if ($id <= 0 || !isPublicStationId($id) || $name === null || !isPublicStationName($name)) {
         return null;
     }
 
@@ -1046,7 +1052,7 @@ function stationSeoLinkFromRow(array $station, string $source): ?array
         'type' => 'station',
         'label' => $name,
         'slug' => $slug,
-        'href' => '/?stacja=' . rawurlencode($slug) . '&id_stacji=' . $id,
+        'href' => stationSeoHref($slug, $id),
         'subtitle' => 'Stacja',
         'source' => $source,
     ];
@@ -1069,6 +1075,11 @@ function isPublicStationName(string $name): bool
     return $name !== $upper;
 }
 
+function isPublicStationId(int $stationId): bool
+{
+    return $stationId > 0 && !in_array($stationId, [5100069], true);
+}
+
 function trainSeoLinkFromRow(array $train, string $source): ?array
 {
     $label = cleanNullable($train['label'] ?? null);
@@ -1078,7 +1089,7 @@ function trainSeoLinkFromRow(array $train, string $source): ?array
 
     $slug = seoSlug($label);
     $number = cleanNullable($train['number'] ?? null) ?? trainNumberFromLabel($label);
-    $href = '/?pociag=' . rawurlencode($slug);
+    $href = trainSeoHref($slug);
 
     return [
         'type' => 'train',
@@ -1755,6 +1766,16 @@ function trainNumberFromLabel(string $label): ?string
     return null;
 }
 
+function stationSeoHref(string $slug, int $stationId): string
+{
+    return '/stacja/' . rawurlencode($slug) . '/id_stacji/' . $stationId;
+}
+
+function trainSeoHref(string $slug): string
+{
+    return '/pociag/' . rawurlencode($slug);
+}
+
 function canonicalTrackedHref(string $href): ?string
 {
     $href = trim($href);
@@ -1769,7 +1790,23 @@ function canonicalTrackedHref(string $href): ?string
 
     $path = $parts['path'] ?? '/';
     $query = $parts['query'] ?? '';
-    if (!in_array($path, ['', '/'], true) || $query === '') {
+    if (!in_array($path, ['', '/'], true)) {
+        if ($query !== '') {
+            return null;
+        }
+
+        if (preg_match('~^/pociag/([a-z0-9-]+)$~i', $path, $matches) === 1) {
+            return trainSeoHref($matches[1]);
+        }
+
+        if (preg_match('~^/stacja/([a-z0-9-]+)/id_stacji/(\d+)$~i', $path, $matches) === 1 && isPublicStationId((int) $matches[2])) {
+            return stationSeoHref($matches[1], (int) $matches[2]);
+        }
+
+        return null;
+    }
+
+    if ($query === '') {
         return null;
     }
 
@@ -1784,6 +1821,14 @@ function canonicalTrackedHref(string $href): ?string
 
     if ($allowed === []) {
         return null;
+    }
+
+    if (isset($allowed['pociag'])) {
+        return trainSeoHref(seoSlug((string) $allowed['pociag']));
+    }
+
+    if (isset($allowed['stacja'], $allowed['id_stacji']) && isPublicStationId((int) $allowed['id_stacji'])) {
+        return stationSeoHref(seoSlug((string) $allowed['stacja']), (int) $allowed['id_stacji']);
     }
 
     return '/?' . http_build_query($allowed, '', '&', PHP_QUERY_RFC3986);

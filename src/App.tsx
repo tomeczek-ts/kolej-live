@@ -47,6 +47,7 @@ import type { Locale, TextsByLocale, TranslateFn } from "./i18n";
 import { popularStationSuggestions } from "./popularStations";
 import {
   deslug,
+  isPublicStationId,
   isPublicStationName,
   routeFromLocation,
   searchHref,
@@ -468,7 +469,7 @@ export default function App() {
       const position = await readCurrentPosition();
       const result = await api.nearbyStations(position.coords.latitude, position.coords.longitude);
       const stationLabel = t("suggestions.station");
-      setSuggestions(result.stations.map((station) => ({
+      setSuggestions(result.stations.filter((station) => isPublicStationId(station.id)).map((station) => ({
         type: "station",
         label: station.name,
         subtitle: station.distanceKm !== undefined
@@ -984,7 +985,7 @@ function SearchResults({
     return <PanelLoader label={t("loading.results")} />;
   }
 
-  const stationResults = search?.stations ?? [];
+  const stationResults = (search?.stations ?? []).filter((station) => isPublicStationId(station.id));
   const trainResults = search?.trains ?? [];
   const resultCount = stationResults.length + trainResults.length;
 

@@ -1,6 +1,15 @@
 Options -Indexes
 RewriteEngine On
 
+RewriteCond %{QUERY_STRING} ^pociag=([^&]+)$ [NC]
+RewriteRule ^$ /pociag/%1? [R=301,L,NE]
+
+RewriteCond %{QUERY_STRING} ^stacja=([^&]+)&id_stacji=([0-9]+)$ [NC]
+RewriteRule ^$ /stacja/%1/id_stacji/%2? [R=301,L,NE]
+
+RewriteCond %{QUERY_STRING} ^id_stacji=([0-9]+)&stacja=([^&]+)$ [NC]
+RewriteRule ^$ /stacja/%2/id_stacji/%1? [R=301,L,NE]
+
 RewriteRule ^api/ - [L]
 RewriteRule ^sitemap\.xml$ /sitemap.php [L]
 

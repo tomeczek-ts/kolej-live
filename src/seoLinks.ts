@@ -53,6 +53,7 @@ export interface UrlRouteTrainList {
 export type UrlRoute = UrlRouteStation | UrlRouteTrain | UrlRouteSearch | UrlRouteTrainList;
 
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+const excludedStationIds = new Set([5100069]);
 
 export function slugify(value: string | null | undefined) {
   const normalized = (value ?? "")
@@ -72,12 +73,7 @@ export function deslug(value: string | null | undefined) {
 }
 
 export function stationHref(station: StationLinkSource) {
-  const params = new URLSearchParams({
-    stacja: slugify(station.name),
-    id_stacji: String(station.id),
-  });
-
-  return `/?${params.toString()}`;
+  return `/stacja/${encodeURIComponent(slugify(station.name))}/id_stacji/${encodeURIComponent(String(station.id))}`;
 }
 
 export function trainNumber(train: TrainLinkSource) {
@@ -89,11 +85,7 @@ export function trainNumber(train: TrainLinkSource) {
 }
 
 export function trainHref(train: TrainLinkSource) {
-  const params = new URLSearchParams({
-    pociag: slugify(train.label),
-  });
-
-  return `/?${params.toString()}`;
+  return `/pociag/${encodeURIComponent(slugify(train.label))}`;
 }
 
 export function trainListHref(kind: TrainListKind) {
@@ -143,6 +135,12 @@ export function isPublicStationName(name: string) {
   return value !== value.toLocaleUpperCase("pl-PL");
 }
 
+export function isPublicStationId(id: number | string | null | undefined) {
+  const numericId = Number(id);
+
+  return Number.isInteger(numericId) && numericId > 0 && !excludedStationIds.has(numericId);
+}
+
 export function trainSeoLink(train: TrainLinkSource, source?: SeoLink["source"]): SeoLink {
   const slug = slugify(train.label);
   const number = trainNumber(train);
@@ -157,7 +155,10 @@ export function trainSeoLink(train: TrainLinkSource, source?: SeoLink["source"])
   };
 }
 
-export function routeFromLocation(location: Pick<Location, "search">): UrlRoute | null {
+export function routeFromLocation(location: Pick<Location, "pathname" | "search">): UrlRoute | null {
+  const pathRoute = routeFromPathname(location.pathname);
+  if (pathRoute) return pathRoute;
+
   const params = new URLSearchParams(location.search);
   const date = cleanDate(params.get("data") ?? params.get("date"));
   const stationId = Number(params.get("id_stacji") ?? params.get("station_id") ?? "");
@@ -243,4 +244,32 @@ function trainListKindFromParam(value: string | null): TrainListKind | null {
 
 function trainNumberFromSlug(value: string) {
   return value.match(/\b\d{2,7}\b/)?.[0] ?? "";
+}
+
+function routeFromPathname(pathname: string): UrlRoute | null {
+  const parts = pathname.split("/").filter(Boolean).map((part) => decodeURIComponent(part));
+
+  if (parts.length === 2 && parts[0] === "pociag") {
+    const slug = parts[1] ?? "";
+    if (!slug) return null;
+
+    return {
+      type: "train",
+      slug,
+      number: trainNumberFromSlug(slug),
+    };
+  }
+
+  if (parts.length === 4 && parts[0] === "stacja" && parts[2] === "id_stacji") {
+    const stationId = Number(parts[3]);
+    if (!Number.isInteger(stationId) || stationId <= 0) return null;
+
+    return {
+      type: "station",
+      id: stationId,
+      slug: parts[1] || `stacja-${stationId}`,
+    };
+  }
+
+  return null;
 }
