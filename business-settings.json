@@ -19,7 +19,7 @@
       { "type": "station", "label": "Warszawa Centralna", "subtitle": "Stacja", "value": "Warszawa Centralna", "stationId": 33605 },
       { "type": "station", "label": "Kraków Główny", "subtitle": "Stacja", "value": "Kraków Główny" },
       { "type": "station", "label": "Poznań Główny", "subtitle": "Stacja", "value": "Poznań Główny" },
-      { "type": "station", "label": "Gdańsk Główny", "subtitle": "Stacja", "value": "Gdańsk Główny" },
+      { "type": "station", "label": "Gdańsk Główny", "subtitle": "Stacja", "value": "Gdańsk Główny", "stationId": 7500 },
       { "type": "station", "label": "Gdynia Główna", "subtitle": "Stacja", "value": "Gdynia Główna" },
       { "type": "station", "label": "Wrocław Główny", "subtitle": "Stacja", "value": "Wrocław Główny" },
       { "type": "station", "label": "Katowice", "subtitle": "Stacja", "value": "Katowice" }
