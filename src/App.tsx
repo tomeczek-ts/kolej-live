@@ -413,6 +413,9 @@ export default function App() {
     setQuery(value);
     setSuggestionsOpen(false);
     setError(null);
+    setSearch(null);
+    setStation(null);
+    setTrain(null);
     setTrainList(null);
     const searchMode = overrideMode ?? mode;
     setPendingDetail(searchPendingDetail(value, searchMode));
@@ -420,7 +423,6 @@ export default function App() {
 
     try {
       const result = await api.search(value, searchMode, date);
-      setSearch(result);
 
       if (options.updateUrl !== false) {
         writeBrowserUrl(searchHref(value, searchMode), options.historyMode ?? "push");
@@ -432,9 +434,14 @@ export default function App() {
         await loadStation(exactStation, false, { historyMode: options.historyMode });
       } else if (result.stations.length === 1 && searchMode !== "train") {
         await loadStation(result.stations[0], false, { historyMode: options.historyMode });
-      } else if (result.stations.length === 0 && result.trains[0]) {
+      } else if (result.stations.length === 0 && result.trains.length === 1) {
         const trainMatch = preferredTrain(result.trains, options.preferTrainSlug);
         await loadTrain(trainMatch, false, { historyMode: options.historyMode });
+      } else if (result.stations.length === 0 && options.preferTrainSlug && result.trains[0]) {
+        const trainMatch = preferredTrain(result.trains, options.preferTrainSlug);
+        await loadTrain(trainMatch, false, { historyMode: options.historyMode });
+      } else {
+        setSearch(result);
       }
     } catch (cause) {
       setError(errorMessage(cause, t));
