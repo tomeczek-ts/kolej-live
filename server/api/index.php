@@ -879,7 +879,8 @@ function mixedSeoLinks(array $recent, array $random, int $limit): array
 function randomSeoLinks(int $limit, array $excludeHrefs = []): array
 {
     $excluded = array_fill_keys(array_filter(array_map('strval', $excludeHrefs)), true);
-    $candidates = [];
+    $stationCandidates = [];
+    $trainCandidates = [];
 
     $stations = data_read_json('stations.json');
     foreach (($stations['items'] ?? []) as $station) {
@@ -888,7 +889,7 @@ function randomSeoLinks(int $limit, array $excludeHrefs = []): array
         }
         $link = stationSeoLinkFromRow($station, 'random');
         if ($link !== null) {
-            $candidates[] = $link;
+            $stationCandidates[] = $link;
         }
     }
 
@@ -899,24 +900,97 @@ function randomSeoLinks(int $limit, array $excludeHrefs = []): array
         }
         $link = trainSeoLinkFromRow($train, 'random');
         if ($link !== null) {
-            $candidates[] = $link;
+            $trainCandidates[] = $link;
         }
     }
 
     foreach (defaultStationSeoLinks('random') as $link) {
-        $candidates[] = $link;
+        $stationCandidates[] = $link;
     }
 
-    shuffle($candidates);
+    foreach (recentTrainSeoLinks('random', 40) as $link) {
+        $trainCandidates[] = $link;
+    }
 
+    return mixedRandomSeoLinks($stationCandidates, $trainCandidates, $limit, $excluded);
+}
+
+function mixedRandomSeoLinks(array $stationCandidates, array $trainCandidates, int $limit, array $excluded): array
+{
+    shuffle($stationCandidates);
+    shuffle($trainCandidates);
+
+    $pools = [
+        'station' => $stationCandidates,
+        'train' => $trainCandidates,
+    ];
+    $positions = [
+        'station' => 0,
+        'train' => 0,
+    ];
+    $nextTypes = ['station', 'train'];
+    shuffle($nextTypes);
     $links = [];
-    foreach ($candidates as $link) {
-        if (isset($excluded[$link['href']])) {
+
+    while (count($links) < $limit && ($positions['station'] < count($pools['station']) || $positions['train'] < count($pools['train']))) {
+        $added = false;
+
+        foreach ($nextTypes as $type) {
+            while ($positions[$type] < count($pools[$type])) {
+                $link = $pools[$type][$positions[$type]];
+                $positions[$type]++;
+
+                if (isset($excluded[$link['href']])) {
+                    continue;
+                }
+
+                $links[] = $link;
+                $excluded[$link['href']] = true;
+                $added = true;
+                break;
+            }
+
+            if ($added || count($links) >= $limit) {
+                break;
+            }
+        }
+
+        $nextTypes = array_reverse($nextTypes);
+
+        if (!$added) {
+            break;
+        }
+    }
+
+    return $links;
+}
+
+function recentTrainSeoLinks(string $source, int $limit): array
+{
+    $payload = data_read_json('recent-searches.json');
+    $items = is_array($payload['items'] ?? null) ? $payload['items'] : [];
+    $links = [];
+
+    foreach ($items as $item) {
+        if (!is_array($item) || ($item['type'] ?? null) !== 'train') {
             continue;
         }
 
-        $links[] = $link;
-        $excluded[$link['href']] = true;
+        $label = cleanNullable($item['label'] ?? null);
+        $href = canonicalTrackedHref($item['href'] ?? '');
+        if ($label === null || $href === null) {
+            continue;
+        }
+
+        $links[] = [
+            'type' => 'train',
+            'label' => $label,
+            'slug' => seoSlug($item['slug'] ?? $label),
+            'href' => $href,
+            'subtitle' => cleanNullable($item['subtitle'] ?? null) ?? seoSlug($label),
+            'source' => $source,
+        ];
+
         if (count($links) >= $limit) {
             break;
         }
