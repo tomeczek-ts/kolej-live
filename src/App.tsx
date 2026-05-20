@@ -23,7 +23,7 @@ import {
   Wifi,
   X,
 } from "lucide-react";
-import type { FormEvent, MouseEvent, ReactNode, WheelEvent } from "react";
+import type { FormEvent, MouseEvent, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { api, AppApiError } from "./api";
 import {
@@ -1208,12 +1208,6 @@ function StationBoard({
     setPastLimit((current) => Math.min(current + pastBoardPageSize, boardState.pastTotal));
   };
 
-  const handleBoardWheel = (event: WheelEvent<HTMLDivElement>) => {
-    if (event.deltaY < 0) {
-      loadEarlierBoardItems();
-    }
-  };
-
   return (
     <>
       <div className="detail-header">
@@ -1236,10 +1230,7 @@ function StationBoard({
       {loading ? (
         <PanelLoader label={t("loading.board")} />
       ) : (
-        <div
-          className="board-table"
-          onWheel={handleBoardWheel}
-        >
+        <div className="board-table">
           <div className="board-head">
             <span>{t("board.time")}</span>
             <span>{t("board.train")}</span>
