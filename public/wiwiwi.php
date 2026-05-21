@@ -2,7 +2,24 @@
 
 declare(strict_types=1);
 
-require __DIR__ . '/hop/api_path.php';
+function wiwiwi_api_root(): string
+{
+    $documentRoot = isset($_SERVER['DOCUMENT_ROOT']) ? rtrim((string) $_SERVER['DOCUMENT_ROOT'], '/\\') : '';
+    $candidates = array_filter([
+        $documentRoot !== '' ? $documentRoot . '/api' : null,
+        __DIR__ . '/api',
+        __DIR__ . '/../api',
+        __DIR__ . '/../server/api',
+    ]);
+
+    foreach ($candidates as $candidate) {
+        if (is_file($candidate . '/config.php')) {
+            return $candidate;
+        }
+    }
+
+    throw new RuntimeException('Brakuje katalogu API strony produkcyjnej.');
+}
 
 function wiwiwi_e($value): string
 {
@@ -11,12 +28,24 @@ function wiwiwi_e($value): string
 
 function wiwiwi_api_require(string $relativePath): void
 {
-    $path = hop_public_api_path($relativePath);
-    if ($path === null) {
+    $path = wiwiwi_api_root() . '/' . ltrim(str_replace('\\', '/', $relativePath), '/');
+    if (!is_file($path)) {
         throw new RuntimeException('Brakuje pliku API: ' . $relativePath);
     }
 
     require_once $path;
+}
+
+function wiwiwi_config_value_from_file(string $key, string $relativePath = 'config.local.php'): string
+{
+    $path = wiwiwi_api_root() . '/' . ltrim(str_replace('\\', '/', $relativePath), '/');
+    if (!is_file($path)) {
+        return '';
+    }
+
+    $config = app_config_load_array($path);
+
+    return is_array($config) && isset($config[$key]) ? (string) $config[$key] : '';
 }
 
 function wiwiwi_date_param(string $name, string $default): string
@@ -54,6 +83,7 @@ $info = [];
 $usage = [];
 
 try {
+    wiwiwi_api_require('AppConfig.php');
     wiwiwi_api_require('config.php');
     wiwiwi_api_require('hop/Config.php');
     wiwiwi_api_require('PdpClient.php');
@@ -68,7 +98,12 @@ try {
         throw new RuntimeException('Brak klucza dostępu do danych PKP PLK.');
     }
 
-    $client = new PdpClient(PDP_API_BASE_URL, PDP_API_KEY, PDP_CACHE_DIR);
+    $productionApiKey = wiwiwi_config_value_from_file('PDP_API_KEY');
+    if ($productionApiKey === '' || strpos($productionApiKey, 'WSTAW_') === 0) {
+        throw new RuntimeException('Brak klucza dostępu do danych PKP PLK w produkcyjnym api/config.local.php.');
+    }
+
+    $client = new PdpClient(PDP_API_BASE_URL, $productionApiKey, PDP_CACHE_DIR);
     $infoPayload = $client->get('/api/v1/apikey/info', [], 60);
     $usagePayload = $client->get('/api/v1/apikey/usage', [
         'fromDate' => $from . 'T00:00:00',
