@@ -1,0 +1,9 @@
+{
+  "historyMatrixWindowDays": 90,
+  "summaryRecentDays": 7,
+  "delayClasses": {
+    "okMaxMinutes": 0,
+    "lateMaxMinutes": 9,
+    "badMaxMinutes": 30
+  }
+}

@@ -223,6 +223,23 @@ export function syncCanonicalLink(href: string) {
   link.href = absolute;
 }
 
+export function syncMetaDescription(description: string) {
+  setMeta("name", "description", description);
+  setMeta("property", "og:description", description);
+  setMeta("name", "twitter:description", description);
+}
+
+function setMeta(attribute: "name" | "property", key: string, content: string) {
+  let meta = document.querySelector<HTMLMetaElement>(`meta[${attribute}="${key}"]`);
+  if (!meta) {
+    meta = document.createElement("meta");
+    meta.setAttribute(attribute, key);
+    document.head.append(meta);
+  }
+
+  meta.content = content;
+}
+
 function cleanDate(value: string | null) {
   return value && datePattern.test(value) ? value : undefined;
 }

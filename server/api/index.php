@@ -37,7 +37,7 @@ if (PDP_API_KEY === '' || strpos(PDP_API_KEY, 'WSTAW_') === 0) {
     respond(500, [
         'error' => [
             'code' => 'missing_api_key',
-            'message' => 'Brak klucza PDP API. Ustaw PDP_API_KEY w server/api/config.php przed wdrozeniem.',
+            'message' => 'Brak klucza dostepu do danych PKP PLK. Ustaw klucz w server/api/config.php przed wdrozeniem.',
         ],
     ]);
 }
@@ -136,7 +136,7 @@ function searchEndpoint(PdpClient $client): array
         try {
             $trains = trainSuggestions($client, $query, $date, business_setting_int('search.trainLimit', 14, 1, 50));
         } catch (Throwable $exception) {
-            $warnings[] = 'Nie udalo sie pobrac listy pociagow: ' . $exception->getMessage();
+            $warnings[] = 'Nie udalo sie pobrac listy pociagow z PKP PLK. Sprobuj ponownie za chwile.';
         }
     }
 

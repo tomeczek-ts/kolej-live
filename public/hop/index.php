@@ -41,21 +41,96 @@ function hop_t(string $key, array $replacements = []): string
     return $value;
 }
 
+function hop_page_business_config(): array
+{
+    static $config = null;
+
+    if (is_array($config)) {
+        return $config;
+    }
+
+    $defaults = [
+        'historyMatrixWindowDays' => 90,
+        'summaryRecentDays' => 7,
+        'delayClasses' => [
+            'okMaxMinutes' => 0,
+            'lateMaxMinutes' => 9,
+            'badMaxMinutes' => 30,
+        ],
+    ];
+    $path = __DIR__ . '/business_config.json';
+    $decoded = null;
+
+    if (is_file($path)) {
+        $raw = file_get_contents($path);
+        $decoded = $raw !== false ? json_decode($raw, true) : null;
+    }
+
+    $config = array_replace_recursive($defaults, is_array($decoded) ? $decoded : []);
+
+    return $config;
+}
+
+function hop_page_business_int(string $path, int $default): int
+{
+    $value = hop_page_business_config();
+
+    foreach (explode('.', $path) as $segment) {
+        if (!is_array($value) || !array_key_exists($segment, $value)) {
+            return $default;
+        }
+
+        $value = $value[$segment];
+    }
+
+    return is_numeric($value) ? (int) $value : $default;
+}
+
+function hop_page_cutoff_date(int $days): ?string
+{
+    if ($days < 0) {
+        return null;
+    }
+
+    $days = max(1, $days);
+
+    return (new DateTimeImmutable('today', new DateTimeZone('Europe/Warsaw')))
+        ->modify('-' . ($days - 1) . ' days')
+        ->format('Y-m-d');
+}
+
 function hop_page_services(PDO $pdo): array
 {
     return $pdo->query(
         "SELECT
-           service_key,
-           MAX(label) AS label,
-           MAX(train_number) AS train_number,
-           MAX(category) AS category,
-           MAX(origin_name) AS origin_name,
-           MAX(destination_name) AS destination_name,
-           COUNT(DISTINCT operating_date) AS days_count,
-           MAX(operating_date) AS last_date
-         FROM hop_train_runs
-         GROUP BY service_key
-         ORDER BY last_date DESC, label ASC"
+           base.service_key,
+           latest.label,
+           latest.train_number,
+           latest.category,
+           latest.train_name,
+           latest.carrier_code,
+           latest.origin_name,
+           latest.destination_name,
+           latest.first_departure,
+           latest.last_arrival,
+           base.days_count,
+           base.last_date
+         FROM (
+           SELECT
+             service_key,
+             COUNT(DISTINCT operating_date) AS days_count,
+             MAX(operating_date) AS last_date
+           FROM hop_train_runs
+           GROUP BY service_key
+         ) base
+         JOIN hop_train_runs latest ON latest.id = (
+           SELECT tr2.id
+           FROM hop_train_runs tr2
+           WHERE tr2.service_key = base.service_key
+           ORDER BY tr2.operating_date DESC, tr2.id DESC
+           LIMIT 1
+         )
+         ORDER BY base.last_date DESC, latest.label ASC"
     )->fetchAll();
 }
 
@@ -123,8 +198,55 @@ function hop_page_service_options(array $services): array
         return [
             'slug' => hop_page_service_slug($service),
             'label' => hop_page_service_label($service),
+            'title' => hop_page_service_suggestion_title($service),
+            'subtitle' => hop_page_service_suggestion_subtitle($service),
         ];
     }, $services);
+}
+
+function hop_page_carrier_name(?string $carrierCode): string
+{
+    $code = strtoupper(trim((string) $carrierCode));
+    $names = [
+        'IC' => 'PKP Intercity',
+        'PKPIC' => 'PKP Intercity',
+        'KM' => 'Koleje Mazowieckie',
+        'KD' => 'Koleje Dolnośląskie',
+        'KS' => 'Koleje Śląskie',
+        'KW' => 'Koleje Wielkopolskie',
+        'ŁKA' => 'Łódzka Kolej Aglomeracyjna',
+        'LKA' => 'Łódzka Kolej Aglomeracyjna',
+        'POLREGIO' => 'POLREGIO',
+        'PR' => 'POLREGIO',
+        'SKM' => 'SKM',
+        'WKD' => 'WKD',
+    ];
+
+    return $names[$code] ?? ($code !== '' ? $code : hop_t('hop.common.empty'));
+}
+
+function hop_page_service_suggestion_title(array $service): string
+{
+    $label = trim((string) ($service['label'] ?? ''));
+    $carrier = hop_page_carrier_name(isset($service['carrier_code']) ? (string) $service['carrier_code'] : null);
+
+    return trim($label . ' · ' . $carrier, " \t\n\r\0\x0B·");
+}
+
+function hop_page_service_suggestion_subtitle(array $service): string
+{
+    $origin = trim((string) ($service['origin_name'] ?? ''));
+    $destination = trim((string) ($service['destination_name'] ?? ''));
+    $departure = hop_page_time_label($service['first_departure'] ?? null);
+    $arrival = hop_page_time_label($service['last_arrival'] ?? null);
+    $left = trim($origin . ($departure !== hop_t('hop.common.empty') ? ' ' . $departure : ''));
+    $right = trim($destination . ($arrival !== hop_t('hop.common.empty') ? ' ' . $arrival : ''));
+
+    if ($left === '' && $right === '') {
+        return hop_t('hop.common.empty');
+    }
+
+    return trim($left . hop_t('hop.service.relation_separator') . $right);
 }
 
 function hop_page_canonical_url(?array $service = null, string $pageKind = 'home'): string
@@ -451,19 +573,25 @@ function hop_page_top_delay_services(PDO $pdo, string $period): array
     return $stmt->fetchAll();
 }
 
-function hop_page_dates(PDO $pdo, string $serviceKey): array
+function hop_page_dates(PDO $pdo, string $serviceKey, int $historyWindowDays): array
 {
+    $cutoff = hop_page_cutoff_date($historyWindowDays);
+    $where = 'tr.service_key = :service_key';
+    $params = ['service_key' => $serviceKey];
+    if ($cutoff !== null) {
+        $where .= ' AND o.observation_date >= :cutoff';
+        $params['cutoff'] = $cutoff;
+    }
+
     $stmt = $pdo->prepare(
         "SELECT DISTINCT o.observation_date
          FROM hop_station_observations o
          JOIN hop_train_runs tr ON tr.id = o.train_run_id
-         WHERE tr.service_key = :service_key
-         ORDER BY o.observation_date DESC
-         LIMIT 14"
+         WHERE $where
+         ORDER BY o.observation_date ASC"
     );
-    $stmt->execute(['service_key' => $serviceKey]);
+    $stmt->execute($params);
     $dates = array_column($stmt->fetchAll(), 'observation_date');
-    sort($dates);
 
     return $dates;
 }
@@ -480,7 +608,8 @@ function hop_page_cells(PDO $pdo, string $serviceKey, array $dates): array
            o.station_id,
            s.name AS station_name,
            o.observation_date,
-           MIN(o.sequence_number) AS sequence_number,
+           MIN(NULLIF(o.sequence_number, 0)) AS sequence_number,
+           COALESCE(ord.avg_sequence, ord.min_sequence, 999999) AS station_sort,
            MAX(o.actual_arrival) AS actual_arrival,
            MAX(o.actual_departure) AS actual_departure,
            MAX(CASE
@@ -496,22 +625,58 @@ function hop_page_cells(PDO $pdo, string $serviceKey, array $dates): array
          FROM hop_station_observations o
          JOIN hop_train_runs tr ON tr.id = o.train_run_id
          JOIN hop_stations s ON s.station_id = o.station_id
+         JOIN (
+           SELECT
+             o2.station_id,
+             AVG(NULLIF(o2.sequence_number, 0)) AS avg_sequence,
+             MIN(NULLIF(o2.sequence_number, 0)) AS min_sequence
+           FROM hop_station_observations o2
+           JOIN hop_train_runs tr2 ON tr2.id = o2.train_run_id
+           WHERE tr2.service_key = ?
+             AND o2.observation_date IN ($datePlaceholders)
+           GROUP BY o2.station_id
+         ) ord ON ord.station_id = o.station_id
          WHERE tr.service_key = ?
            AND o.observation_date IN ($datePlaceholders)
-         GROUP BY o.station_id, s.name, o.observation_date
-         ORDER BY MIN(o.sequence_number), s.name"
+         GROUP BY o.station_id, s.name, o.observation_date, ord.avg_sequence, ord.min_sequence
+         ORDER BY station_sort, COALESCE(MIN(NULLIF(o.sequence_number, 0)), 999999), s.name"
     );
-    $stmt->execute(array_merge([$serviceKey], $dates));
+    $stmt->execute(array_merge([$serviceKey], $dates, [$serviceKey], $dates));
 
     return $stmt->fetchAll();
 }
 
-function hop_page_summary(PDO $pdo, string $serviceKey): array
+function hop_page_summary(PDO $pdo, string $serviceKey, int $historyWindowDays, int $recentDays): array
 {
-    $stmt = $pdo->prepare(
+    $historyCutoff = hop_page_cutoff_date($historyWindowDays);
+    $historyWhere = 'tr.service_key = :service_key';
+    $historyParams = ['service_key' => $serviceKey];
+    if ($historyCutoff !== null) {
+        $historyWhere .= ' AND obs.observation_date >= :history_cutoff';
+        $historyParams['history_cutoff'] = $historyCutoff;
+    }
+
+    $daysStmt = $pdo->prepare(
         "SELECT
-           COUNT(DISTINCT o.operating_date) AS days_count,
-           COUNT(o.id) AS observations_count,
+           COUNT(DISTINCT obs.observation_date) AS days_count,
+           COUNT(obs.id) AS observations_count
+         FROM hop_station_observations obs
+         JOIN hop_train_runs tr ON tr.id = obs.train_run_id
+         WHERE $historyWhere"
+    );
+    $daysStmt->execute($historyParams);
+    $summary = $daysStmt->fetch() ?: [];
+
+    $recentCutoff = hop_page_cutoff_date($recentDays);
+    $recentWhere = 'tr.service_key = :service_key';
+    $recentParams = ['service_key' => $serviceKey];
+    if ($recentCutoff !== null) {
+        $recentWhere .= ' AND obs.observation_date >= :recent_cutoff';
+        $recentParams['recent_cutoff'] = $recentCutoff;
+    }
+
+    $delayStmt = $pdo->prepare(
+        "SELECT
            ROUND(AVG(CASE
              WHEN o.effective_arrival_delay IS NULL AND o.effective_departure_delay IS NULL THEN NULL
              WHEN o.effective_arrival_delay IS NULL THEN o.effective_departure_delay
@@ -542,12 +707,13 @@ function hop_page_summary(PDO $pdo, string $serviceKey): array
              END AS effective_departure_delay
            FROM hop_station_observations obs
            JOIN hop_train_runs tr ON tr.id = obs.train_run_id
-           WHERE tr.service_key = :service_key
+           WHERE $recentWhere
          ) o"
     );
-    $stmt->execute(['service_key' => $serviceKey]);
+    $delayStmt->execute($recentParams);
+    $delays = $delayStmt->fetch() ?: [];
 
-    return $stmt->fetch() ?: [];
+    return array_merge($summary, $delays);
 }
 
 function hop_page_cell_class(?int $delay, bool $cancelled): string
@@ -560,15 +726,15 @@ function hop_page_cell_class(?int $delay, bool $cancelled): string
         return 'empty';
     }
 
-    if ($delay <= 10) {
+    if ($delay <= hop_page_business_int('delayClasses.okMaxMinutes', 0)) {
         return 'ok';
     }
 
-    if ($delay <= 30) {
+    if ($delay <= hop_page_business_int('delayClasses.lateMaxMinutes', 9)) {
         return 'late';
     }
 
-    if ($delay <= 60) {
+    if ($delay <= hop_page_business_int('delayClasses.badMaxMinutes', 30)) {
         return 'bad';
     }
 
@@ -694,16 +860,18 @@ try {
 
         hop_page_record_search($pdo, $selected);
 
-        $dates = hop_page_dates($pdo, $selected);
+        $historyWindowDays = hop_page_business_int('historyMatrixWindowDays', 90);
+        $summaryRecentDays = hop_page_business_int('summaryRecentDays', 7);
+        $dates = hop_page_dates($pdo, $selected, $historyWindowDays);
         $cells = hop_page_cells($pdo, $selected, $dates);
-        $summary = hop_page_summary($pdo, $selected);
+        $summary = hop_page_summary($pdo, $selected, $historyWindowDays, $summaryRecentDays);
 
         foreach ($cells as $cell) {
             $stationId = (int) $cell['station_id'];
             if (!isset($rows[$stationId])) {
                 $rows[$stationId] = [
                     'name' => $cell['station_name'],
-                    'sequence' => (int) $cell['sequence_number'],
+                    'sequence' => (int) ($cell['station_sort'] ?? $cell['sequence_number'] ?? 0),
                     'cells' => [],
                 ];
             }
@@ -877,7 +1045,7 @@ $pageJsonLd = hop_page_json_ld($pageMeta, $selectedService);
     .service-suggestion-row small { color: var(--muted); font-size: 12px; text-transform: none; }
     .service-suggestion-empty { min-height: 48px; display: flex; align-items: center; gap: 8px; padding: 0 10px; color: var(--muted); font-size: 12px; text-transform: none; }
     button { min-height: 42px; padding: 0 14px; border: 0; border-radius: 8px; color: #fff; background: var(--red); cursor: pointer; font-weight: 780; }
-    .metrics { display: grid; grid-template-columns: repeat(5, minmax(120px, 1fr)); gap: 8px; margin: 12px 0 16px; }
+    .metrics { display: grid; grid-template-columns: repeat(4, minmax(120px, 1fr)); gap: 8px; margin: 12px 0 16px; }
     .metric { padding: 12px; background: var(--soft); border: 1px solid var(--line); border-radius: 8px; }
     .metric span { display: block; color: var(--muted); font-size: 12px; font-weight: 800; text-transform: uppercase; }
     .metric strong { display: block; margin-top: 4px; font-size: 20px; }
@@ -1045,7 +1213,6 @@ $pageJsonLd = hop_page_json_ld($pageMeta, $selectedService);
         <div class="metrics">
           <div class="metric"><span><?= e(hop_t('hop.metrics.train')) ?></span><strong><?= e($selectedService['label'] ?? hop_t('hop.common.empty')) ?></strong></div>
           <div class="metric"><span><?= e(hop_t('hop.metrics.days')) ?></span><strong><?= e($summary['days_count'] ?? 0) ?></strong></div>
-          <div class="metric"><span><?= e(hop_t('hop.metrics.observations')) ?></span><strong><?= e($summary['observations_count'] ?? 0) ?></strong></div>
           <div class="metric"><span><?= e(hop_t('hop.metrics.avg_delay')) ?></span><strong><?= e($summary['avg_delay'] ?? hop_t('hop.common.empty')) ?> <?= e(hop_t('hop.common.minute_unit')) ?></strong></div>
           <div class="metric"><span><?= e(hop_t('hop.metrics.max_delay')) ?></span><strong><?= e($summary['max_delay'] ?? hop_t('hop.common.empty')) ?> <?= e(hop_t('hop.common.minute_unit')) ?></strong></div>
         </div>
@@ -1271,7 +1438,9 @@ $pageJsonLd = hop_page_json_ld($pageMeta, $selectedService);
 
       options.forEach(function (option) {
         slugByLabel[option.label] = option.slug || '';
+        slugByLabel[option.title] = option.slug || '';
         slugByNormalizedLabel[normalize(option.label)] = option.slug || '';
+        slugByNormalizedLabel[normalize(option.title || '')] = option.slug || '';
       });
 
       function matchingSuggestions() {
@@ -1284,7 +1453,9 @@ $pageJsonLd = hop_page_json_ld($pageMeta, $selectedService);
 
         return options
           .filter(function (option) {
-            return normalize(option.label).indexOf(query) !== -1;
+            return normalize(option.label).indexOf(query) !== -1
+              || normalize(option.title || '').indexOf(query) !== -1
+              || normalize(option.subtitle || '').indexOf(query) !== -1;
           })
           .slice(0, 12);
       }
@@ -1327,8 +1498,9 @@ $pageJsonLd = hop_page_json_ld($pageMeta, $selectedService);
           row.className = 'service-suggestion-row';
           row.setAttribute('role', 'option');
           row.setAttribute('id', 'service-suggestion-' + index);
-          row.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17V7c0-2.2 1.8-4 4-4h8c2.2 0 4 1.8 4 4v10c0 1.7-1.3 3-3 3H7c-1.7 0-3-1.3-3-3Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8 7h8M8 12h8M8 20l-2 2M16 20l2 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="8" cy="16" r="1.5" fill="currentColor"/><circle cx="16" cy="16" r="1.5" fill="currentColor"/></svg><span><strong></strong><small>HOP</small></span>';
-          row.querySelector('strong').textContent = option.label;
+          row.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17V7c0-2.2 1.8-4 4-4h8c2.2 0 4 1.8 4 4v10c0 1.7-1.3 3-3 3H7c-1.7 0-3-1.3-3-3Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8 7h8M8 12h8M8 20l-2 2M16 20l2 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="8" cy="16" r="1.5" fill="currentColor"/><circle cx="16" cy="16" r="1.5" fill="currentColor"/></svg><span><strong></strong><small></small></span>';
+          row.querySelector('strong').textContent = option.title || option.label;
+          row.querySelector('small').textContent = option.subtitle || '';
           row.addEventListener('mousedown', function (event) {
             event.preventDefault();
           });

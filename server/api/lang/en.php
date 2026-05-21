@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'meta.title' => 'Live train delays and station boards | kolej.live',
+    'meta.description' => 'Check live train delays, current station departures and arrivals, and railway disruptions using PKP PLK data.',
     'language.label' => 'Language',
     'theme.aria' => 'Page appearance',
     'theme.dark' => 'Dark',
@@ -35,7 +36,7 @@ return [
     'suggestions.loading' => 'Loading suggestions',
     'suggestions.station' => 'Station',
     'suggestions.train' => 'Train',
-    'demo.ribbon' => 'Local Vite mode is showing demo data. Production will use PHP and the PDP API.',
+    'demo.ribbon' => 'Local Vite mode is showing demo data. Production will use PHP and PKP PLK data.',
     'stats.aria' => 'Daily statistics',
     'stats.total' => 'Total',
     'stats.inProgress' => 'Running',
@@ -117,7 +118,7 @@ return [
     'errors.api_error' => 'API error.',
     'errors.network_error' => 'Could not load data.',
     'errors.method_not_allowed' => 'Only GET requests are allowed.',
-    'errors.missing_api_key' => 'Missing PDP API key. Set PDP_API_KEY in server/api/config.php before deployment.',
+    'errors.missing_api_key' => 'Missing PKP PLK data access key. Set the key in server/api/config.php before deployment.',
     'errors.unknown_action' => 'Unknown API action.',
     'errors.station_required' => 'Station id is missing.',
     'errors.train_required' => 'Train identifiers are missing.',
@@ -126,7 +127,7 @@ return [
     'errors.geolocation_denied' => 'Location permission was not granted.',
     'errors.geolocation_timeout' => 'Location lookup timed out.',
     'errors.geolocation_failed' => 'Could not load nearby stations.',
-    'errors.pdp_api_error' => 'The PDP API returned an error. Try again shortly.',
+    'errors.pdp_api_error' => 'PKP PLK did not return data right now. Try again shortly.',
     'errors.server_error' => 'A kolej.live server error occurred.',
     'errors.generic' => 'Could not load data.',
 ];

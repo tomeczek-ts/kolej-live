@@ -54,6 +54,7 @@ import {
   stationHref,
   stationSeoLink,
   syncCanonicalLink,
+  syncMetaDescription,
   trainHref,
   trainListHref,
   trainSeoLink,
@@ -150,9 +151,10 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.lang = locale;
-    document.title = pageTitle(station, train, t);
+    document.title = pageTitle(station, train, trainList, search, t);
+    syncMetaDescription(pageDescription(station, train, trainList, search, locale, t));
     window.localStorage.setItem(localeStorageKey, locale);
-  }, [locale, station, t, train]);
+  }, [locale, search, station, t, train, trainList]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -1666,7 +1668,7 @@ function queryFromRoute(route: UrlRoute) {
 }
 
 function withTrainDetailWarning(result: SearchResponse): SearchResponse {
-  const warning = "Znaleziono pociąg, ale PDP nie zwróciło teraz szczegółów trasy. Wybierz pociąg z listy albo spróbuj ponownie za chwilę.";
+  const warning = "Znaleziono pociąg, ale PKP PLK nie zwróciło teraz szczegółów trasy. Wybierz pociąg z listy albo spróbuj ponownie za chwilę.";
   if (result.warnings.includes(warning)) {
     return result;
   }
@@ -1785,11 +1787,82 @@ function normalizeStationName(value: string) {
     .toLowerCase();
 }
 
-function pageTitle(station: StationResponse | null, train: TrainResponse | null, t: TranslateFn) {
+function pageTitle(
+  station: StationResponse | null,
+  train: TrainResponse | null,
+  trainList: TrainListResponse | null,
+  search: SearchResponse | null,
+  t: TranslateFn,
+) {
   if (train) return `${train.train.label} - kolej.live`;
   if (station) return `${station.station.name} - kolej.live`;
+  if (trainList) return `${trainListQuery(trainList.kind, t)} - kolej.live`;
+  if (search?.query) return `${search.query} - kolej.live`;
 
   return t("meta.title");
+}
+
+function pageDescription(
+  station: StationResponse | null,
+  train: TrainResponse | null,
+  trainList: TrainListResponse | null,
+  search: SearchResponse | null,
+  locale: Locale,
+  t: TranslateFn,
+) {
+  const english = locale === "en";
+
+  if (train) {
+    const label = train.train.label;
+    const relation = train.train.origin && train.train.destination
+      ? `${train.train.origin} -> ${train.train.destination}`
+      : train.timeline.length > 0
+        ? `${train.timeline[0]?.stationName ?? ""} -> ${train.timeline[train.timeline.length - 1]?.stationName ?? ""}`
+        : "";
+    const maxDelay = maxTrainDelay(train);
+    const delayPart = maxDelay === null
+      ? (english ? "current live status" : "aktualny status")
+      : maxDelay <= 0
+        ? (english ? "on time" : "planowo")
+        : (english ? `delay up to ${maxDelay} min` : `opóźnienie do ${maxDelay} min`);
+
+    if (english) {
+      return `Live delay for train ${label}: ${delayPart}${relation ? `, route ${relation}` : ""}, station times and current status. PKP PLK data.`;
+    }
+
+    return `Opóźnienie pociągu ${label} na żywo: ${delayPart}${relation ? `, relacja ${relation}` : ""}, godziny na stacjach i aktualny status. Dane PKP PLK.`;
+  }
+
+  if (station) {
+    const name = station.station.name;
+
+    return english
+      ? `Live train delays at ${name}: departures, arrivals, platforms, tracks and current disruptions. PKP PLK data.`
+      : `Opóźnienia pociągów na stacji ${name} na żywo: odjazdy, przyjazdy, perony, tory i aktualne utrudnienia. Dane PKP PLK.`;
+  }
+
+  if (trainList) {
+    const label = trainListQuery(trainList.kind, t).toLocaleLowerCase(locale === "pl" ? "pl-PL" : "en-US");
+
+    return english
+      ? `Live list: ${label} today, with routes, planned times and current train statuses from PKP PLK data.`
+      : `Lista ${label} dzisiaj: relacje, godziny planowe i aktualne statusy pociągów z danych PKP PLK.`;
+  }
+
+  if (search?.query) {
+    return english
+      ? `Search results for ${search.query}: live train delays, station boards and current PKP PLK railway data.`
+      : `Wyniki wyszukiwania ${search.query}: opóźnienia pociągów na żywo, tablice stacji i aktualne dane PKP PLK.`;
+  }
+
+  return t("meta.description");
+}
+
+function maxTrainDelay(train: TrainResponse) {
+  const delays = train.timeline.flatMap((stop) => [stop.arrivalDelayMinutes, stop.departureDelayMinutes])
+    .filter((delay): delay is number => typeof delay === "number");
+
+  return delays.length > 0 ? Math.max(...delays) : null;
 }
 
 function SummaryMetric({ label, value, tone }: { label: string; value: string; tone?: "ok" | "warn" }) {

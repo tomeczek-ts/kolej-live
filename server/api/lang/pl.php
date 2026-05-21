@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'meta.title' => 'Opóźnienia pociągów na żywo | kolej.live',
+    'meta.description' => 'Sprawdź opóźnienia pociągów na żywo, aktualne odjazdy i przyjazdy na stacjach oraz utrudnienia z danych PKP PLK.',
     'language.label' => 'Język',
     'theme.aria' => 'Wygląd strony',
     'theme.dark' => 'Ciemny',
@@ -35,7 +36,7 @@ return [
     'suggestions.loading' => 'Ładowanie podpowiedzi',
     'suggestions.station' => 'Stacja',
     'suggestions.train' => 'Pociąg',
-    'demo.ribbon' => 'Tryb lokalny Vite pokazuje dane demonstracyjne. Produkcja użyje PHP i PDP API.',
+    'demo.ribbon' => 'Tryb lokalny Vite pokazuje dane demonstracyjne. Produkcja użyje PHP i danych PKP PLK.',
     'stats.aria' => 'Statystyki dnia',
     'stats.total' => 'Razem',
     'stats.inProgress' => 'W trasie',
@@ -117,7 +118,7 @@ return [
     'errors.api_error' => 'Błąd API.',
     'errors.network_error' => 'Nie udało się pobrać danych.',
     'errors.method_not_allowed' => 'Dozwolone są tylko zapytania GET.',
-    'errors.missing_api_key' => 'Brak klucza PDP API. Ustaw PDP_API_KEY w server/api/config.php przed wdrożeniem.',
+    'errors.missing_api_key' => 'Brak klucza dostępu do danych PKP PLK. Ustaw klucz w server/api/config.php przed wdrożeniem.',
     'errors.unknown_action' => 'Nieznana akcja API.',
     'errors.station_required' => 'Brakuje parametru id stacji.',
     'errors.train_required' => 'Brakuje identyfikatorów pociągu.',
@@ -126,7 +127,7 @@ return [
     'errors.geolocation_denied' => 'Nie mam zgody na pobranie lokalizacji.',
     'errors.geolocation_timeout' => 'Nie udało się pobrać lokalizacji w wyznaczonym czasie.',
     'errors.geolocation_failed' => 'Nie udało się pobrać najbliższych stacji.',
-    'errors.pdp_api_error' => 'PDP API zwróciło błąd. Spróbuj ponownie za chwilę.',
+    'errors.pdp_api_error' => 'PKP PLK nie zwróciło teraz danych. Spróbuj ponownie za chwilę.',
     'errors.server_error' => 'Wystąpił błąd po stronie kolej.live.',
     'errors.generic' => 'Nie udało się pobrać danych.',
 ];
