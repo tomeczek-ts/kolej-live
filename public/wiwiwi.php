@@ -48,6 +48,27 @@ function wiwiwi_config_value_from_file(string $key, string $relativePath = 'conf
     return is_array($config) && isset($config[$key]) ? (string) $config[$key] : '';
 }
 
+function wiwiwi_token_is_valid(string $token): bool
+{
+    if ($token === '') {
+        return false;
+    }
+
+    $allowedTokens = array_filter([
+        wiwiwi_config_value_from_file('WIWIWI_TOKEN'),
+        wiwiwi_config_value_from_file('CACHE_WARM_TOKEN'),
+        defined('HOP_COLLECT_TOKEN') ? (string) HOP_COLLECT_TOKEN : '',
+    ], static fn(string $value): bool => $value !== '');
+
+    foreach ($allowedTokens as $allowedToken) {
+        if (hash_equals($allowedToken, $token)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 function wiwiwi_date_param(string $name, string $default): string
 {
     $value = isset($_GET[$name]) && !is_array($_GET[$name]) ? (string) $_GET[$name] : '';
@@ -89,9 +110,9 @@ try {
     wiwiwi_api_require('PdpClient.php');
 
     $token = isset($_GET['token']) && !is_array($_GET['token']) ? (string) $_GET['token'] : '';
-    if (!defined('HOP_COLLECT_TOKEN') || HOP_COLLECT_TOKEN === '' || !hash_equals(HOP_COLLECT_TOKEN, $token)) {
+    if (!wiwiwi_token_is_valid($token)) {
         http_response_code(403);
-        throw new RuntimeException('Brak dostępu. Podaj token kolektora HOP w parametrze token.');
+        throw new RuntimeException('Brak dostępu. Podaj token raportu w parametrze token.');
     }
 
     if (PDP_API_KEY === '' || strpos(PDP_API_KEY, 'WSTAW_') === 0) {

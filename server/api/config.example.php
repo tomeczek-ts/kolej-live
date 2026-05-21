@@ -6,6 +6,7 @@ return [
     'PDP_CACHE_DIR' => __DIR__ . '/cache',
     'PDP_HTTP_TIMEOUT_SECONDS' => 25,
     'CACHE_WARM_TOKEN' => '',
+    'WIWIWI_TOKEN' => '',
     'HOP_DB_HOST' => 'localhost',
     'HOP_DB_NAME' => 'WSTAW_NAZWE_BAZY',
     'HOP_DB_USER' => 'WSTAW_UZYTKOWNIKA_BAZY',
