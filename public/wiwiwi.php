@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+header('X-Robots-Tag: noindex, nofollow, noarchive, nosnippet', true);
+header('Cache-Control: no-store, private', true);
+
 function wiwiwi_api_root(): string
 {
     $documentRoot = isset($_SERVER['DOCUMENT_ROOT']) ? rtrim((string) $_SERVER['DOCUMENT_ROOT'], '/\\') : '';
@@ -93,6 +96,10 @@ function wiwiwi_percent($value, $limit): string
 
 function wiwiwi_public_error(Throwable $exception): string
 {
+    if ((int) $exception->getCode() === 403) {
+        return 'Brak dostępu.';
+    }
+
     return str_replace(['PDP API', 'PDP'], 'PKP PLK', $exception->getMessage());
 }
 
@@ -109,10 +116,10 @@ try {
     wiwiwi_api_require('hop/Config.php');
     wiwiwi_api_require('PdpClient.php');
 
-    $token = isset($_GET['token']) && !is_array($_GET['token']) ? (string) $_GET['token'] : '';
+    $token = isset($_GET['rp3']) && !is_array($_GET['rp3']) ? (string) $_GET['rp3'] : '';
     if (!wiwiwi_token_is_valid($token)) {
         http_response_code(403);
-        throw new RuntimeException('Brak dostępu. Podaj token raportu w parametrze token.');
+        throw new RuntimeException('Brak dostępu.', 403);
     }
 
     if (PDP_API_KEY === '' || strpos(PDP_API_KEY, 'WSTAW_') === 0) {
@@ -158,7 +165,7 @@ $hourlyLimit = (int) ($info['hourlyRateLimit'] ?? 0);
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="robots" content="noindex, nofollow">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
   <title>Raport użycia klucza PKP PLK | kolej.live</title>
   <style>
     :root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; --bg: #f6f7f8; --surface: #fff; --ink: #111317; --muted: #667085; --line: #dce1e6; --red: #c7222a; --green: #087a54; --amber: #b7791f; }
@@ -201,7 +208,7 @@ $hourlyLimit = (int) ($info['hourlyRateLimit'] ?? 0);
     </header>
 
     <form method="get">
-      <input type="hidden" name="token" value="<?= wiwiwi_e(isset($_GET['token']) && !is_array($_GET['token']) ? (string) $_GET['token'] : '') ?>">
+      <input type="hidden" name="rp3" value="<?= wiwiwi_e(isset($_GET['rp3']) && !is_array($_GET['rp3']) ? (string) $_GET['rp3'] : '') ?>">
       <label>Od <input type="date" name="from" value="<?= wiwiwi_e($from) ?>"></label>
       <label>Do <input type="date" name="to" value="<?= wiwiwi_e($to) ?>"></label>
       <button type="submit">Odśwież</button>
