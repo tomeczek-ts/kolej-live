@@ -31,6 +31,8 @@ return [
     'hop.service.parts_separator' => ' · ',
     'hop.search.label' => 'Train',
     'hop.search.placeholder' => 'Search train, relation, or number',
+    'hop.search.submit' => 'Search',
+    'hop.search.suggestions_aria' => 'Train suggestions',
     'hop.search.choose_suggestion' => 'Choose a train from the suggestions.',
     'hop.empty_hint' => 'Search for a train to see information about its saved delays.',
     'hop.all_trains.title' => 'All trains in the HOP database',

@@ -861,8 +861,21 @@ $pageJsonLd = hop_page_json_ld($pageMeta, $selectedService);
     .controls { display: grid; grid-template-columns: minmax(260px, 1fr); gap: 12px; align-items: end; margin-bottom: 14px; }
     label { display: grid; gap: 6px; color: var(--muted); font-size: 12px; font-weight: 800; text-transform: uppercase; }
     input, button { font: inherit; }
-    .service-search { width: 100%; min-height: 42px; padding: 0 12px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; font-weight: 700; }
-    .service-search:focus { outline: 2px solid rgba(199, 34, 42, .18); border-color: var(--red); }
+    .service-search-wrap { position: relative; display: grid; grid-template-columns: 20px minmax(0, 1fr) 42px; align-items: center; gap: 10px; min-height: 52px; padding: 0 6px 0 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+    .service-search-wrap svg { color: var(--muted); }
+    .service-search { width: 100%; min-height: 42px; padding: 0; color: var(--ink); background: transparent; border: 0; font-weight: 700; outline: 0; }
+    .service-search-wrap:focus-within { outline: 2px solid rgba(199, 34, 42, .18); border-color: var(--red); }
+    .service-search:focus { outline: 0; }
+    .service-search-submit { min-width: 38px; min-height: 38px; display: inline-grid; place-items: center; padding: 0; }
+    .service-search-submit svg { color: #fff; }
+    .service-suggestions { position: absolute; z-index: 20; top: calc(100% + 8px); right: 0; left: 0; display: grid; max-height: 360px; overflow: auto; padding: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); }
+    .service-suggestion-row { width: 100%; min-height: 52px; display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 10px; align-items: center; padding: 9px 10px; color: var(--ink); background: transparent; border: 0; border-radius: 6px; text-align: left; cursor: pointer; }
+    .service-suggestion-row:hover, .service-suggestion-row:focus-visible { background: var(--soft); outline: 0; }
+    .service-suggestion-row svg { color: var(--red); }
+    .service-suggestion-row strong, .service-suggestion-row small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .service-suggestion-row strong { font-size: 14px; font-weight: 790; }
+    .service-suggestion-row small { color: var(--muted); font-size: 12px; text-transform: none; }
+    .service-suggestion-empty { min-height: 48px; display: flex; align-items: center; gap: 8px; padding: 0 10px; color: var(--muted); font-size: 12px; text-transform: none; }
     button { min-height: 42px; padding: 0 14px; border: 0; border-radius: 8px; color: #fff; background: var(--red); cursor: pointer; font-weight: 780; }
     .metrics { display: grid; grid-template-columns: repeat(5, minmax(120px, 1fr)); gap: 8px; margin: 12px 0 16px; }
     .metric { padding: 12px; background: var(--soft); border: 1px solid var(--line); border-radius: 8px; }
@@ -977,20 +990,26 @@ $pageJsonLd = hop_page_json_ld($pageMeta, $selectedService);
         <form class="controls" method="get" data-service-form>
           <label>
             <?= e(hop_t('hop.search.label')) ?>
-            <input
-              class="service-search"
-              id="service-search"
-              name="historia_opoznien_query"
-              type="search"
-              list="service-options"
-              autocomplete="off"
-              placeholder="<?= e(hop_t('hop.search.placeholder')) ?>"
-              value=""
-              data-service-search
-            >
+            <div class="service-search-wrap">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.3-4.3M10.8 18a7.2 7.2 0 1 1 0-14.4 7.2 7.2 0 0 1 0 14.4Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <input
+                class="service-search"
+                id="service-search"
+                name="historia_opoznien_query"
+                type="search"
+                autocomplete="off"
+                placeholder="<?= e(hop_t('hop.search.placeholder')) ?>"
+                value=""
+                aria-controls="service-suggestions"
+                aria-expanded="false"
+                data-service-search
+              >
+              <button class="service-search-submit" type="submit" aria-label="<?= e(hop_t('hop.search.submit')) ?>">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <div class="service-suggestions" id="service-suggestions" role="listbox" aria-label="<?= e(hop_t('hop.search.suggestions_aria')) ?>" hidden data-service-suggestions></div>
+            </div>
             <input type="hidden" name="historia_opoznien" value="" data-service-slug>
-            <datalist id="service-options">
-            </datalist>
           </label>
         </form>
         <div class="hint"><?= e(hop_t('hop.empty_hint')) ?></div>
@@ -1000,20 +1019,26 @@ $pageJsonLd = hop_page_json_ld($pageMeta, $selectedService);
         <form class="controls" method="get" data-service-form>
           <label>
             <?= e(hop_t('hop.search.label')) ?>
-            <input
-              class="service-search"
-              id="service-search"
-              name="historia_opoznien_query"
-              type="search"
-              list="service-options"
-              autocomplete="off"
-              placeholder="<?= e(hop_t('hop.search.placeholder')) ?>"
-              value=""
-              data-service-search
-            >
+            <div class="service-search-wrap">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.3-4.3M10.8 18a7.2 7.2 0 1 1 0-14.4 7.2 7.2 0 0 1 0 14.4Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <input
+                class="service-search"
+                id="service-search"
+                name="historia_opoznien_query"
+                type="search"
+                autocomplete="off"
+                placeholder="<?= e(hop_t('hop.search.placeholder')) ?>"
+                value=""
+                aria-controls="service-suggestions"
+                aria-expanded="false"
+                data-service-search
+              >
+              <button class="service-search-submit" type="submit" aria-label="<?= e(hop_t('hop.search.submit')) ?>">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <div class="service-suggestions" id="service-suggestions" role="listbox" aria-label="<?= e(hop_t('hop.search.suggestions_aria')) ?>" hidden data-service-suggestions></div>
+            </div>
             <input type="hidden" name="historia_opoznien" value="<?= e($selectedService !== null ? hop_page_service_slug($selectedService) : '') ?>" data-service-slug>
-            <datalist id="service-options">
-            </datalist>
           </label>
         </form>
 
@@ -1227,49 +1252,99 @@ $pageJsonLd = hop_page_json_ld($pageMeta, $selectedService);
 
       var input = form.querySelector('[data-service-search]');
       var serviceSlug = form.querySelector('[data-service-slug]');
-      var optionList = document.getElementById('service-options');
+      var suggestionsBox = form.querySelector('[data-service-suggestions]');
       var options = <?= json_encode(hop_page_service_options($services), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '[]' ?>;
       var canonicalBaseUrl = <?= json_encode(hop_page_canonical_url(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '""' ?>;
       var chooseSuggestionMessage = <?= json_encode(hop_t('hop.search.choose_suggestion'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '""' ?>;
       var slugByLabel = {};
+      var slugByNormalizedLabel = {};
       var currentSlug = serviceSlug.value;
       var historyTable = document.querySelector('[data-history-table]');
 
-      options.forEach(function (option) {
-        slugByLabel[option.label] = option.slug || '';
-      });
-
       function normalize(value) {
-        return value.toLowerCase();
+        return value
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/ł/g, 'l');
       }
 
-      function renderSuggestions() {
-        var value = input.value.trim();
-        optionList.innerHTML = '';
+      options.forEach(function (option) {
+        slugByLabel[option.label] = option.slug || '';
+        slugByNormalizedLabel[normalize(option.label)] = option.slug || '';
+      });
 
-        if (value.length < 3) {
-          return;
+      function matchingSuggestions() {
+        var value = input.value.trim();
+        if (value.length < 2) {
+          return [];
         }
 
         var query = normalize(value);
-        var rendered = 0;
-        options.some(function (option) {
-          if (normalize(option.label).indexOf(query) === -1) {
-            return false;
-          }
 
-          var element = document.createElement('option');
-          element.value = option.label;
-          optionList.appendChild(element);
-          rendered += 1;
+        return options
+          .filter(function (option) {
+            return normalize(option.label).indexOf(query) !== -1;
+          })
+          .slice(0, 12);
+      }
 
-          return rendered >= 80;
+      function hideSuggestions() {
+        if (!suggestionsBox) {
+          return;
+        }
+
+        suggestionsBox.hidden = true;
+        input.setAttribute('aria-expanded', 'false');
+      }
+
+      function pickSuggestion(option) {
+        input.value = option.label;
+        serviceSlug.value = option.slug || '';
+        hideSuggestions();
+
+        if (serviceSlug.value !== '' && serviceSlug.value !== currentSlug) {
+          window.location.href = serviceUrl(serviceSlug.value);
+        }
+      }
+
+      function renderSuggestions() {
+        if (!suggestionsBox) {
+          return;
+        }
+
+        var matches = matchingSuggestions();
+        suggestionsBox.innerHTML = '';
+
+        if (matches.length === 0) {
+          hideSuggestions();
+          return;
+        }
+
+        matches.forEach(function (option, index) {
+          var row = document.createElement('button');
+          row.type = 'button';
+          row.className = 'service-suggestion-row';
+          row.setAttribute('role', 'option');
+          row.setAttribute('id', 'service-suggestion-' + index);
+          row.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17V7c0-2.2 1.8-4 4-4h8c2.2 0 4 1.8 4 4v10c0 1.7-1.3 3-3 3H7c-1.7 0-3-1.3-3-3Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8 7h8M8 12h8M8 20l-2 2M16 20l2 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="8" cy="16" r="1.5" fill="currentColor"/><circle cx="16" cy="16" r="1.5" fill="currentColor"/></svg><span><strong></strong><small>HOP</small></span>';
+          row.querySelector('strong').textContent = option.label;
+          row.addEventListener('mousedown', function (event) {
+            event.preventDefault();
+          });
+          row.addEventListener('click', function () {
+            pickSuggestion(option);
+          });
+          suggestionsBox.appendChild(row);
         });
+
+        suggestionsBox.hidden = false;
+        input.setAttribute('aria-expanded', 'true');
       }
 
       function syncServiceSlug() {
         var value = input.value.trim();
-        serviceSlug.value = slugByLabel[value] || '';
+        serviceSlug.value = slugByLabel[value] || slugByNormalizedLabel[normalize(value)] || '';
       }
 
       function serviceUrl(slug) {
@@ -1287,7 +1362,12 @@ $pageJsonLd = hop_page_json_ld($pageMeta, $selectedService);
       input.addEventListener('input', function () {
         renderSuggestions();
         input.setCustomValidity('');
-        navigateWhenReady();
+      });
+      input.addEventListener('focus', function () {
+        renderSuggestions();
+      });
+      input.addEventListener('blur', function () {
+        window.setTimeout(hideSuggestions, 160);
       });
       form.addEventListener('submit', function (event) {
         event.preventDefault();

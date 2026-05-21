@@ -31,6 +31,8 @@ return [
     'hop.service.parts_separator' => ' · ',
     'hop.search.label' => 'Pociąg',
     'hop.search.placeholder' => 'Szukaj pociągu, relacji lub numeru',
+    'hop.search.submit' => 'Szukaj',
+    'hop.search.suggestions_aria' => 'Podpowiedzi pociągów',
     'hop.search.choose_suggestion' => 'Wybierz pociąg z podpowiedzi.',
     'hop.empty_hint' => 'Wyszukaj pociąg, aby zobaczyć informacje o jego historycznych opóźnieniach.',
     'hop.all_trains.title' => 'Wszystkie pociągi w bazie HOP',
