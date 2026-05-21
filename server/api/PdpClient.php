@@ -124,6 +124,9 @@ final class PdpClient
             curl_close($ch);
 
             if ($body === false) {
+                $this->logApiError('transport_error', $url, 502, [
+                    'curlError' => $error,
+                ]);
                 throw new PdpApiException('Nie udalo sie polaczyc z PDP API: ' . $error, 502);
             }
         } else {
@@ -149,6 +152,9 @@ final class PdpClient
             }
 
             if ($body === false) {
+                $this->logApiError('transport_error', $url, 502, [
+                    'streamError' => error_get_last(),
+                ]);
                 throw new PdpApiException('Nie udalo sie polaczyc z PDP API.', 502);
             }
         }
@@ -156,6 +162,12 @@ final class PdpClient
         $decoded = json_decode((string) $body, true);
 
         if ($decoded === null && json_last_error() !== JSON_ERROR_NONE) {
+            $payload = [
+                'status' => $status,
+                'jsonError' => json_last_error_msg(),
+                'bodySnippet' => substr((string) $body, 0, 1200),
+            ];
+            $this->logApiError('invalid_json', $url, 502, $payload);
             throw new PdpApiException('PDP API zwrocilo niepoprawny JSON.', 502, [
                 'status' => $status,
                 'jsonError' => json_last_error_msg(),
@@ -163,10 +175,91 @@ final class PdpClient
         }
 
         if ($status >= 400) {
+            $this->logApiError('http_error', $url, $status, $decoded);
             throw new PdpApiException('PDP API zwrocilo blad HTTP ' . $status . '.', $status, $decoded);
         }
 
         return is_array($decoded) ? $decoded : [];
+    }
+
+    private function logApiError(string $reason, string $url, int $status, $payload = null): void
+    {
+        $file = $this->errorLogFile();
+        if ($file === '') {
+            return;
+        }
+
+        $dir = dirname($file);
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0775, true);
+        }
+
+        if (!is_dir($dir) || !is_writable($dir)) {
+            error_log('[pdp_api_error] ' . $reason . ' HTTP ' . $status . ' ' . $url);
+            return;
+        }
+
+        $this->protectLogDirectory($dir);
+
+        $entry = [
+            'time' => (new DateTimeImmutable('now', new DateTimeZone('Europe/Warsaw')))->format('Y-m-d H:i:s'),
+            'reason' => $reason,
+            'status' => $status,
+            'url' => $url,
+            'payload' => $this->redactLogValue($payload),
+        ];
+        $line = json_encode($entry, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PARTIAL_OUTPUT_ON_ERROR) . PHP_EOL;
+
+        @file_put_contents($file, $line, FILE_APPEND | LOCK_EX);
+    }
+
+    private function errorLogFile(): string
+    {
+        if (defined('PDP_ERROR_LOG_FILE') && is_string(PDP_ERROR_LOG_FILE)) {
+            return PDP_ERROR_LOG_FILE;
+        }
+
+        return $this->cacheDir . '/logs/pdp_api_errors.log';
+    }
+
+    private function protectLogDirectory(string $dir): void
+    {
+        $htaccess = $dir . '/.htaccess';
+        if (!is_file($htaccess)) {
+            @file_put_contents($htaccess, "Require all denied\nDeny from all\n");
+        }
+
+        $index = $dir . '/index.html';
+        if (!is_file($index)) {
+            @file_put_contents($index, '');
+        }
+    }
+
+    private function redactLogValue($value)
+    {
+        if (is_array($value)) {
+            $redacted = [];
+            foreach ($value as $key => $item) {
+                if (preg_match('/api[_-]?key|authorization|password|passwd|secret|token/i', (string) $key)) {
+                    $redacted[$key] = '[redacted]';
+                    continue;
+                }
+
+                $redacted[$key] = $this->redactLogValue($item);
+            }
+
+            return $redacted;
+        }
+
+        if (is_object($value)) {
+            return '[object ' . get_class($value) . ']';
+        }
+
+        if (is_string($value) && strlen($value) > 1200) {
+            return substr($value, 0, 1200) . '...[truncated]';
+        }
+
+        return $value;
     }
 
     private function readCache(string $key): ?array

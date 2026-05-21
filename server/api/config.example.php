@@ -5,6 +5,7 @@ return [
     'PDP_API_KEY' => 'WSTAW_KLUCZ_PDP_API',
     'PDP_CACHE_DIR' => __DIR__ . '/cache',
     'PDP_HTTP_TIMEOUT_SECONDS' => 25,
+    'PDP_ERROR_LOG_FILE' => __DIR__ . '/cache/logs/pdp_api_errors.log',
     'CACHE_WARM_TOKEN' => '',
     'WIWIWI_TOKEN' => '',
     'HOP_DB_HOST' => 'localhost',
