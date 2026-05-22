@@ -13,6 +13,7 @@ return [
     'cookies.title' => 'Privacy and cookies',
     'cookies.body' => 'We use cookies and Google Analytics to measure visits and improve kolej.live.',
     'cookies.accept' => 'Accept',
+    'brand.tagline' => 'Live PKP train tracking',
     'nav.aria' => 'Sections',
     'nav.status' => 'Train status',
     'nav.arrivals' => 'Arrivals',

@@ -139,7 +139,9 @@ a {
 .brand-block {
   min-width: 0;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
 }
 
 .brand {
@@ -154,6 +156,13 @@ a {
   display: block;
   width: 196px;
   height: auto;
+}
+
+.brand-tagline {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.15;
+  font-weight: 600;
 }
 
 :root[data-theme="dark"] .brand-logo {
@@ -1486,6 +1495,10 @@ select:focus-visible {
 
   .brand-logo {
     width: 154px;
+  }
+
+  .brand-tagline {
+    font-size: 10px;
   }
 
   .site-intro h1 {

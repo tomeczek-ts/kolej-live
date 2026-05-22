@@ -148,6 +148,10 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const t = useMemo<TranslateFn>(() => (key, values) => translate(locale, key, values, textMaps), [locale, textMaps]);
   const dateTimeLocale = dateTimeLocales[locale];
+  const stationResultCount = (search?.stations ?? []).filter((item) => isPublicStationId(item.id)).length;
+  const trainResultCount = search?.trains?.length ?? 0;
+  const resultCount = stationResultCount + trainResultCount;
+  const showResultsSection = loading === "search" || (!!search && resultCount > 1 && !station && !train);
 
   useEffect(() => {
     document.documentElement.lang = locale;
@@ -646,6 +650,7 @@ export default function App() {
           <a className="brand" href="/" aria-label="kolej.live">
             <img className="brand-logo" src="/kolej-live-logo.svg" alt="kolej.live" width="196" height="52" />
           </a>
+          <small className="brand-tagline">{t("brand.tagline")}</small>
         </div>
         <nav className="main-nav" aria-label={t("nav.aria")}>
           {navItems.map((item) => (
@@ -774,16 +779,18 @@ export default function App() {
 
       <section className="workspace">
         <aside className="results-panel">
-          <SearchResults
-            search={search}
-            loading={loading === "search"}
-            t={t}
-            onStation={loadStation}
-            onTrain={loadTrain}
-            activeStationId={station?.station.id}
-            activeTrainId={train ? `${train.train.scheduleId}-${train.train.orderId}` : null}
-            dateTimeLocale={dateTimeLocale}
-          />
+          {showResultsSection && (
+            <SearchResults
+              search={search}
+              loading={loading === "search"}
+              t={t}
+              onStation={loadStation}
+              onTrain={loadTrain}
+              activeStationId={station?.station.id}
+              activeTrainId={train ? `${train.train.scheduleId}-${train.train.orderId}` : null}
+              dateTimeLocale={dateTimeLocale}
+            />
+          )}
           <div className="seo-links-desktop">
             <SeoLinksPanel links={seoLinks?.links ?? []} t={t} onSeoLink={navigateToSeoLink} />
           </div>
@@ -1024,7 +1031,6 @@ function SearchResults({
       <div className="panel-title">
         <div>
           <h2>{t("results.title")}</h2>
-          <span>{search ? t("results.count", { count: resultCount }) : t("results.ready")}</span>
         </div>
       </div>
 
@@ -1036,7 +1042,6 @@ function SearchResults({
       ))}
 
       <div className="result-group">
-        <h3>{t("results.matches")}</h3>
         {resultCount > 0 ? (
           <>
           {stationResults.map((station) => {

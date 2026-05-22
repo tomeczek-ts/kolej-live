@@ -13,6 +13,7 @@ return [
     'cookies.title' => 'Prywatność i cookies',
     'cookies.body' => 'Używamy plików cookies i Google Analytics do pomiaru odwiedzin oraz poprawy działania kolej.live.',
     'cookies.accept' => 'Akceptuję',
+    'brand.tagline' => 'Śledzenie pociągów PKP na żywo',
     'nav.aria' => 'Sekcje',
     'nav.status' => 'Status pociągu',
     'nav.arrivals' => 'Przyjazdy',
