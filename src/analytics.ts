@@ -3,6 +3,8 @@ export function installGoogleAnalytics(tagId: string) {
     return;
   }
 
+  window[`ga-disable-${tagId}`] = false;
+
   const script = document.createElement("script");
   script.async = true;
   script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(tagId)}`;
@@ -18,9 +20,18 @@ export function installGoogleAnalytics(tagId: string) {
   window.gtag("config", tagId);
 }
 
+export function disableGoogleAnalytics(tagId: string) {
+  if (!tagId) {
+    return;
+  }
+
+  window[`ga-disable-${tagId}`] = true;
+}
+
 declare global {
   interface Window {
     dataLayer: unknown[][];
     gtag: (...args: unknown[]) => void;
+    [key: `ga-disable-${string}`]: boolean | undefined;
   }
 }

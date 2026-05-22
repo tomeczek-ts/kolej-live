@@ -44,6 +44,7 @@ $summary = [
     'trainsSeen' => 0,
     'trainRunsUpserted' => 0,
     'stationObservationsUpserted' => 0,
+    'cacheFilesRemoved' => 0,
 ];
 
 hop_collect_log('INFO', 'Collection started', [
@@ -189,6 +190,14 @@ try {
         'date' => $date,
         'selection_date' => hop_collect_random_selection_date($date),
         'services' => $summary['dailyRandomServices'],
+    ]);
+
+    $stage = 'cleanup_api_cache';
+    $stageContext = ['cache_dir' => PDP_CACHE_DIR];
+    $summary['cacheFilesRemoved'] = hop_collect_cleanup_api_cache(PDP_CACHE_DIR);
+    hop_collect_log('INFO', 'Temporary PDP cache cleaned', [
+        'cache_dir' => PDP_CACHE_DIR,
+        'files_removed' => $summary['cacheFilesRemoved'],
     ]);
 
     $stage = 'finish_run';
@@ -341,6 +350,44 @@ function hop_collect_exception_payload(Throwable $exception): array
         'line' => $exception->getLine(),
         'trace' => $exception->getTraceAsString(),
     ];
+}
+
+function hop_collect_cleanup_api_cache(string $cacheDir): int
+{
+    if (!is_dir($cacheDir)) {
+        return 0;
+    }
+
+    $removed = 0;
+    $now = time();
+    $files = glob(rtrim($cacheDir, '/\\') . '/*.json');
+    if (!is_array($files)) {
+        return 0;
+    }
+
+    foreach ($files as $file) {
+        $basename = basename($file);
+        if ($basename === 'runtime-settings.json') {
+            continue;
+        }
+
+        if (!preg_match('/^(negative-)?[a-f0-9]{40}\.json$/', $basename)) {
+            continue;
+        }
+
+        $raw = file_get_contents($file);
+        $decoded = $raw !== false ? json_decode($raw, true) : null;
+        $expiresAt = is_array($decoded) ? (int) ($decoded['expiresAt'] ?? 0) : 0;
+        $mtime = (int) (@filemtime($file) ?: 0);
+        $expired = $expiresAt > 0 && $expiresAt < $now;
+        $staleWithoutExpiry = $expiresAt <= 0 && $mtime > 0 && $mtime < $now - 86400;
+
+        if (($expired || $staleWithoutExpiry) && @unlink($file)) {
+            $removed++;
+        }
+    }
+
+    return $removed;
 }
 
 function hop_collect_operation_log_context(array $operation): array

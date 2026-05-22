@@ -31,7 +31,9 @@
     "daySchedules": 600,
     "route": 300,
     "stationOperations": 18,
+    "operationsLookup": 45,
     "trainOperation": 12,
+    "negative404": 1800,
     "statistics": 45,
     "disruptions": 60
   },

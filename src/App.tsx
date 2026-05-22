@@ -25,7 +25,7 @@ import {
 import type { FormEvent, MouseEvent, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { api, AppApiError } from "./api";
-import { installGoogleAnalytics } from "./analytics";
+import { disableGoogleAnalytics, installGoogleAnalytics } from "./analytics";
 import {
   defaultSearchMode,
   delayThresholds,
@@ -208,7 +208,15 @@ export default function App() {
   }, [locale]);
 
   useEffect(() => {
-    installGoogleAnalytics(googleTagId);
+    void api.runtimeSettings().then((settings) => {
+      if (settings.analyticsEnabled) {
+        installGoogleAnalytics(googleTagId);
+      } else {
+        disableGoogleAnalytics(googleTagId);
+      }
+    }).catch(() => {
+      installGoogleAnalytics(googleTagId);
+    });
     void refreshStats(initialDate);
     void refreshSeoLinks();
 

@@ -97,6 +97,12 @@ async function request<T>(params: Record<string, string | number | undefined>, d
 }
 
 export const api = {
+  runtimeSettings() {
+    return request<{ analyticsEnabled: boolean; gaDisabled: boolean; updatedAt: string | null }>(
+      { action: "runtime_settings" },
+      { analyticsEnabled: true, gaDisabled: false, updatedAt: null },
+    );
+  },
   search(q: string, mode: SearchMode, date: string) {
     return request<SearchResponse>({ action: "search", q, mode, date }, { ...demoSearch, query: q, date });
   },

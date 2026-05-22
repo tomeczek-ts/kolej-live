@@ -54,9 +54,26 @@ final class PdpClient
             if ($cached !== null) {
                 return $cached;
             }
+
+            $negative = $this->readNegativeCache($cacheKey);
+            if ($negative !== null) {
+                throw new PdpApiException(
+                    (string) ($negative['message'] ?? 'PKP PLK nie znalazło danych.'),
+                    (int) ($negative['status'] ?? 404),
+                    $negative['payload'] ?? null
+                );
+            }
         }
 
-        $payload = $this->requestJson($url);
+        try {
+            $payload = $this->requestJson($url);
+        } catch (PdpApiException $exception) {
+            if ($ttlSeconds > 0 && $exception->statusCode() === 404) {
+                $this->writeNegativeCache($cacheKey, $url, $exception);
+            }
+
+            throw $exception;
+        }
 
         if ($ttlSeconds > 0) {
             $this->writeCache($cacheKey, $payload, $ttlSeconds);
@@ -206,6 +223,7 @@ final class PdpClient
             'reason' => $reason,
             'status' => $status,
             'url' => $url,
+            'request' => $this->requestLogContext(),
             'payload' => $this->redactLogValue($payload),
         ];
         $line = json_encode($entry, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PARTIAL_OUTPUT_ON_ERROR) . PHP_EOL;
@@ -260,6 +278,120 @@ final class PdpClient
         }
 
         return $value;
+    }
+
+    private function requestLogContext(): array
+    {
+        $query = $_GET ?? [];
+
+        return [
+            'method' => $_SERVER['REQUEST_METHOD'] ?? null,
+            'host' => $_SERVER['HTTP_HOST'] ?? null,
+            'requestUri' => $this->redactUrl((string) ($_SERVER['REQUEST_URI'] ?? '')),
+            'action' => isset($query['action']) && !is_array($query['action']) ? (string) $query['action'] : null,
+            'remoteAddr' => $_SERVER['REMOTE_ADDR'] ?? null,
+            'forwardedFor' => $this->redactForwardedFor((string) ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? '')),
+            'userAgent' => $_SERVER['HTTP_USER_AGENT'] ?? null,
+            'referer' => $this->redactUrl((string) ($_SERVER['HTTP_REFERER'] ?? '')),
+        ];
+    }
+
+    private function redactForwardedFor(string $value): ?string
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return null;
+        }
+
+        return implode(', ', array_slice(array_map('trim', explode(',', $value)), 0, 3));
+    }
+
+    private function redactUrl(string $value): ?string
+    {
+        if ($value === '') {
+            return null;
+        }
+
+        $parts = parse_url($value);
+        if (!is_array($parts)) {
+            return $value;
+        }
+
+        $query = [];
+        if (isset($parts['query'])) {
+            parse_str((string) $parts['query'], $query);
+            foreach ($query as $key => $item) {
+                if (preg_match('/api[_-]?key|authorization|password|passwd|secret|token|rp3/i', (string) $key)) {
+                    $query[$key] = '[redacted]';
+                }
+            }
+        }
+
+        $path = (string) ($parts['path'] ?? '');
+        $rebuilt = '';
+        if (isset($parts['scheme'], $parts['host'])) {
+            $rebuilt .= $parts['scheme'] . '://' . $parts['host'];
+            if (isset($parts['port'])) {
+                $rebuilt .= ':' . $parts['port'];
+            }
+        }
+        $rebuilt .= $path;
+        if ($query !== []) {
+            $rebuilt .= '?' . http_build_query($query, '', '&', PHP_QUERY_RFC3986);
+        }
+
+        return $rebuilt !== '' ? $rebuilt : $value;
+    }
+
+    private function readNegativeCache(string $key): ?array
+    {
+        $file = $this->cacheDir . '/negative-' . $key . '.json';
+        if (!is_file($file)) {
+            return null;
+        }
+
+        $raw = file_get_contents($file);
+        if ($raw === false) {
+            return null;
+        }
+
+        $decoded = json_decode($raw, true);
+        if (!is_array($decoded) || !isset($decoded['expiresAt'])) {
+            return null;
+        }
+
+        if ((int) $decoded['expiresAt'] < time()) {
+            @unlink($file);
+            return null;
+        }
+
+        return $decoded;
+    }
+
+    private function writeNegativeCache(string $key, string $url, PdpApiException $exception): void
+    {
+        if (!is_dir($this->cacheDir)) {
+            @mkdir($this->cacheDir, 0775, true);
+        }
+
+        if (!is_dir($this->cacheDir) || !is_writable($this->cacheDir)) {
+            return;
+        }
+
+        $ttlSeconds = function_exists('business_cache_ttl') ? business_cache_ttl('negative404', 1800) : 1800;
+        if ($ttlSeconds <= 0) {
+            return;
+        }
+
+        $data = [
+            'expiresAt' => time() + $ttlSeconds,
+            'status' => $exception->statusCode(),
+            'message' => $exception->getMessage(),
+            'url' => $url,
+            'payload' => $this->redactLogValue($exception->payload()),
+        ];
+
+        @file_put_contents($this->cacheDir . '/negative-' . $key . '.json', json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), LOCK_EX);
     }
 
     private function readCache(string $key): ?array

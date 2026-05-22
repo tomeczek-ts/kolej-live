@@ -109,18 +109,41 @@ $to = wiwiwi_date_param('to', $today);
 $error = null;
 $info = [];
 $usage = [];
+$gaToggleMessage = null;
+$runtimeSettings = ['gaDisabled' => false, 'updatedAt' => null];
 
 try {
     wiwiwi_api_require('AppConfig.php');
     wiwiwi_api_require('config.php');
     wiwiwi_api_require('hop/Config.php');
     wiwiwi_api_require('PdpClient.php');
+    wiwiwi_api_require('lib/RuntimeSettings.php');
 
-    $token = isset($_GET['rp3']) && !is_array($_GET['rp3']) ? (string) $_GET['rp3'] : '';
+    $token = isset($_REQUEST['rp3']) && !is_array($_REQUEST['rp3']) ? (string) $_REQUEST['rp3'] : '';
     if (!wiwiwi_token_is_valid($token)) {
         http_response_code(403);
         throw new RuntimeException('Brak dostępu.', 403);
     }
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ga_action'])) {
+        $maintenancePassword = isset($_POST['maintenance_password']) && !is_array($_POST['maintenance_password']) ? (string) $_POST['maintenance_password'] : '';
+        if (MAINTENANCE_PASSWORD === '' || !hash_equals(MAINTENANCE_PASSWORD, $maintenancePassword)) {
+            throw new RuntimeException('Niepoprawne haslo maintenance.', 403);
+        }
+
+        $disableGa = (string) $_POST['ga_action'] === 'disable';
+        $runtimeSettings = runtime_settings_read();
+        $runtimeSettings['gaDisabled'] = $disableGa;
+        $runtimeSettings['updatedAt'] = (new DateTimeImmutable('now', new DateTimeZone('Europe/Warsaw')))->format(DateTimeInterface::ATOM);
+        $runtimeSettings['updatedBy'] = $_SERVER['REMOTE_ADDR'] ?? null;
+        if (!runtime_settings_write($runtimeSettings)) {
+            throw new RuntimeException('Nie udalo sie zapisac ustawien runtime.');
+        }
+
+        $gaToggleMessage = $disableGa ? 'Sledzenie GA zostalo wylaczone.' : 'Sledzenie GA zostalo wlaczone.';
+    }
+
+    $runtimeSettings = runtime_settings_read();
 
     if (PDP_API_KEY === '' || strpos(PDP_API_KEY, 'WSTAW_') === 0) {
         throw new RuntimeException('Brak klucza dostępu do danych PKP PLK.');
@@ -208,7 +231,7 @@ $hourlyLimit = (int) ($info['hourlyRateLimit'] ?? 0);
     </header>
 
     <form method="get">
-      <input type="hidden" name="rp3" value="<?= wiwiwi_e(isset($_GET['rp3']) && !is_array($_GET['rp3']) ? (string) $_GET['rp3'] : '') ?>">
+      <input type="hidden" name="rp3" value="<?= wiwiwi_e(isset($_REQUEST['rp3']) && !is_array($_REQUEST['rp3']) ? (string) $_REQUEST['rp3'] : '') ?>">
       <label>Od <input type="date" name="from" value="<?= wiwiwi_e($from) ?>"></label>
       <label>Do <input type="date" name="to" value="<?= wiwiwi_e($to) ?>"></label>
       <button type="submit">Odśwież</button>
@@ -217,6 +240,22 @@ $hourlyLimit = (int) ($info['hourlyRateLimit'] ?? 0);
     <?php if ($error !== null): ?>
       <div class="error"><?= wiwiwi_e($error) ?></div>
     <?php else: ?>
+      <?php if ($gaToggleMessage !== null): ?>
+        <div class="card" style="margin-bottom:16px"><strong class="ok"><?= wiwiwi_e($gaToggleMessage) ?></strong></div>
+      <?php endif; ?>
+
+      <section class="panel">
+        <h2>Sledzenie Google Analytics</h2>
+        <p>Stan globalny dla kolej.live i hop.kolej.live: <strong class="<?= !empty($runtimeSettings['gaDisabled']) ? 'warn' : 'ok' ?>"><?= !empty($runtimeSettings['gaDisabled']) ? 'wylaczone' : 'wlaczone' ?></strong></p>
+        <form method="post" style="margin:12px 0 0">
+          <input type="hidden" name="rp3" value="<?= wiwiwi_e(isset($_REQUEST['rp3']) && !is_array($_REQUEST['rp3']) ? (string) $_REQUEST['rp3'] : '') ?>">
+          <input type="hidden" name="from" value="<?= wiwiwi_e($from) ?>">
+          <input type="hidden" name="to" value="<?= wiwiwi_e($to) ?>">
+          <label>Haslo maintenance <input type="password" name="maintenance_password" autocomplete="current-password" required></label>
+          <button type="submit" name="ga_action" value="disable">Wylacz GA</button>
+          <button type="submit" name="ga_action" value="enable">Wlacz GA</button>
+        </form>
+      </section>
       <section class="grid" aria-label="Podsumowanie użycia">
         <div class="card"><span>Dziś</span><strong class="<?= $dailyLimit > 0 && $todayUsage / max(1, $dailyLimit) > .8 ? 'bad' : 'ok' ?>"><?= wiwiwi_e(wiwiwi_number($todayUsage)) ?></strong></div>
         <div class="card"><span>Limit dzienny</span><strong><?= wiwiwi_e(wiwiwi_number($dailyLimit)) ?></strong><p><?= wiwiwi_e(wiwiwi_percent($todayUsage, $dailyLimit)) ?> wykorzystania</p></div>

@@ -8,6 +8,7 @@ require __DIR__ . '/lib/DataFiles.php';
 require __DIR__ . '/lib/Translations.php';
 require __DIR__ . '/lib/StationCoordinates.php';
 require __DIR__ . '/lib/BusinessSettings.php';
+require __DIR__ . '/lib/RuntimeSettings.php';
 require __DIR__ . '/pdp/stations.php';
 require __DIR__ . '/pdp/schedules.php';
 require __DIR__ . '/pdp/operations.php';
@@ -31,6 +32,9 @@ if ($publicAction === 'seo_links') {
 }
 if ($publicAction === 'track_link') {
     respond(200, trackLinkEndpoint());
+}
+if ($publicAction === 'runtime_settings') {
+    respond(200, runtimeSettingsEndpoint());
 }
 
 if (PDP_API_KEY === '' || strpos(PDP_API_KEY, 'WSTAW_') === 0) {
@@ -68,6 +72,9 @@ try {
             break;
         case 'track_link':
             respond(200, trackLinkEndpoint());
+            break;
+        case 'runtime_settings':
+            respond(200, runtimeSettingsEndpoint());
             break;
         case 'station':
             respond(200, stationEndpoint($client));
@@ -371,7 +378,7 @@ function trainEndpoint(PdpClient $client): array
     }
 
     $route = pdp_schedule_route($client, $scheduleId, $orderId);
-    $operation = pdp_operation_train($client, $scheduleId, $operationOrderId, $date);
+    $operation = operationForTrain($client, $scheduleId, [$operationOrderId, $orderId], $date);
     $stationMap = stationDictionaryMap($client);
 
     return [
@@ -379,7 +386,8 @@ function trainEndpoint(PdpClient $client): array
         'operationOrderId' => $operationOrderId,
         'date' => $date,
         'status' => statusInfo($operation['trainStatus'] ?? null),
-        'timeline' => buildTrainTimeline($route, $operation, $stationMap, $date),
+        'liveDataAvailable' => $operation !== null,
+        'timeline' => buildTrainTimeline($route, $operation ?? [], $stationMap, $date),
         'generatedAt' => gmdate(DATE_ATOM),
     ];
 }
@@ -419,6 +427,17 @@ function statsEndpoint(PdpClient $client): array
         'date' => $date,
         'stats' => $stats,
         'generatedAt' => $stats['generatedAt'] ?? gmdate(DATE_ATOM),
+    ];
+}
+
+function runtimeSettingsEndpoint(): array
+{
+    $settings = runtime_settings_read();
+
+    return [
+        'analyticsEnabled' => !((bool) ($settings['gaDisabled'] ?? false)),
+        'gaDisabled' => (bool) ($settings['gaDisabled'] ?? false),
+        'updatedAt' => $settings['updatedAt'] ?? null,
     ];
 }
 
@@ -686,6 +705,44 @@ function trainsForDay(PdpClient $client, string $date): array
     }
 
     return $trains;
+}
+
+function operationForTrain(PdpClient $client, int $scheduleId, array $orderIds, string $date): ?array
+{
+    $wantedOrderIds = array_values(array_unique(array_filter(array_map('intval', $orderIds), static fn(int $value): bool => $value > 0)));
+    if ($scheduleId <= 0 || $wantedOrderIds === []) {
+        return null;
+    }
+
+    $page = 1;
+    $pageSize = 5000;
+    $ttlSeconds = function_exists('business_cache_ttl') ? business_cache_ttl('operationsLookup', 45) : 45;
+
+    do {
+        $operations = pdp_operations_all($client, $page, $pageSize, $ttlSeconds);
+        foreach (($operations['trains'] ?? []) as $operation) {
+            if (!is_array($operation) || (string) ($operation['operatingDate'] ?? '') !== $date) {
+                continue;
+            }
+
+            if ((int) ($operation['scheduleId'] ?? 0) !== $scheduleId) {
+                continue;
+            }
+
+            foreach ([(int) ($operation['orderId'] ?? 0), (int) ($operation['trainOrderId'] ?? 0)] as $operationOrderId) {
+                if (in_array($operationOrderId, $wantedOrderIds, true)) {
+                    return $operation;
+                }
+            }
+        }
+
+        $pagination = $operations['pagination'] ?? [];
+        $hasNext = (bool) ($pagination['hasNextPage'] ?? false);
+        $totalPages = (int) ($pagination['totalPages'] ?? $page);
+        $page++;
+    } while ($hasNext || $page <= $totalPages);
+
+    return null;
 }
 
 function trainsByOperationStatus(PdpClient $client, string $date, array $scheduledTrains, string $kind): array

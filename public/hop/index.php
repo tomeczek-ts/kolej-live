@@ -14,7 +14,11 @@ $businessSettingsPath = hop_public_api_path('lib/BusinessSettings.php');
 if ($businessSettingsPath !== null) {
     require_once $businessSettingsPath;
 }
-$googleTagId = function_exists('business_setting') ? (string) business_setting('googleTagId', '') : '';
+$runtimeSettingsPath = hop_public_api_path('lib/RuntimeSettings.php');
+if ($runtimeSettingsPath !== null) {
+    require_once $runtimeSettingsPath;
+}
+$googleTagId = function_exists('business_setting') && (!function_exists('runtime_google_analytics_enabled') || runtime_google_analytics_enabled()) ? (string) business_setting('googleTagId', '') : '';
 $bootstrapError = null;
 $databasePath = hop_public_api_path('hop/Database.php');
 if ($databasePath === null) {

@@ -158,6 +158,7 @@ export interface TrainResponse {
   operationOrderId: number;
   date: string;
   status: StatusInfo;
+  liveDataAvailable?: boolean;
   timeline: TimelineStop[];
   generatedAt?: string;
   demo?: boolean;

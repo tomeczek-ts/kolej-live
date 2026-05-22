@@ -8,6 +8,7 @@ return [
     'PDP_ERROR_LOG_FILE' => __DIR__ . '/cache/logs/pdp_api_errors.log',
     'CACHE_WARM_TOKEN' => '',
     'WIWIWI_TOKEN' => '',
+    'MAINTENANCE_PASSWORD' => '',
     'HOP_DB_HOST' => 'localhost',
     'HOP_DB_NAME' => 'WSTAW_NAZWE_BAZY',
     'HOP_DB_USER' => 'WSTAW_UZYTKOWNIKA_BAZY',
