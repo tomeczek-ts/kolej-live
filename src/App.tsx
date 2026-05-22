@@ -784,7 +784,9 @@ export default function App() {
             activeTrainId={train ? `${train.train.scheduleId}-${train.train.orderId}` : null}
             dateTimeLocale={dateTimeLocale}
           />
-          <SeoLinksPanel links={seoLinks?.links ?? []} t={t} onSeoLink={navigateToSeoLink} />
+          <div className="seo-links-desktop">
+            <SeoLinksPanel links={seoLinks?.links ?? []} t={t} onSeoLink={navigateToSeoLink} />
+          </div>
         </aside>
 
         <section className="detail-panel">
@@ -829,6 +831,10 @@ export default function App() {
           )}
         </section>
       </section>
+
+      <div className="seo-links-mobile">
+        <SeoLinksPanel links={seoLinks?.links ?? []} t={t} onSeoLink={navigateToSeoLink} />
+      </div>
 
       {!cookieAccepted && (
         <CookieNotice
