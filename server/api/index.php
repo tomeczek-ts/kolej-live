@@ -382,11 +382,13 @@ function trainEndpoint(PdpClient $client): array
     $operation = operationForTrain($client, $scheduleId, [$operationOrderId, $orderId], $date);
     $stationMap = stationDictionaryMap($client);
 
+    $summary = routeSummary($route, $stationMap, $date);
+
     return [
-        'train' => routeSummary($route, $stationMap, $date),
+        'train' => $summary,
         'operationOrderId' => $operationOrderId,
         'date' => $date,
-        'status' => statusInfo($operation['trainStatus'] ?? null),
+        'status' => statusInfo($operation['trainStatus'] ?? null, $summary['firstDeparture'] ?? null, $summary['lastArrival'] ?? null),
         'liveDataAvailable' => $operation !== null,
         'timeline' => buildTrainTimeline($route, $operation ?? [], $stationMap, $date),
         'generatedAt' => gmdate(DATE_ATOM),
@@ -1238,7 +1240,7 @@ function boardItem(string $kind, array $summary, int $stationId, string $planned
         'platform' => cleanNullable($platform),
         'track' => cleanNullable($track),
         'stopTypeName' => cleanNullable($plannedStop['stopTypeName'] ?? null),
-        'status' => statusInfo($operation['trainStatus'] ?? null),
+        'status' => statusInfo($operation['trainStatus'] ?? null, $summary['firstDeparture'] ?? null, $summary['lastArrival'] ?? null),
         'isConfirmed' => (bool) ($liveStop['isConfirmed'] ?? false),
         'isCancelled' => (bool) ($liveStop['isCancelled'] ?? false),
     ];
@@ -1564,7 +1566,7 @@ function operationStopForStation(array $operation, int $stationId, $plannedOrder
     return $fallback;
 }
 
-function statusInfo($code): array
+function statusInfo($code, ?string $firstDeparture = null, ?string $lastArrival = null): array
 {
     $code = is_string($code) ? $code : null;
     $map = [
@@ -1575,11 +1577,40 @@ function statusInfo($code): array
         'Q' => ['label' => 'Czesciowo odwolany', 'tone' => 'warning'],
     ];
 
+    if ($code === null || !isset($map[$code])) {
+        $code = scheduledStatusCode($firstDeparture, $lastArrival);
+    }
+
     return [
         'code' => $code,
         'label' => $code !== null && isset($map[$code]) ? $map[$code]['label'] : 'Brak statusu',
         'tone' => $code !== null && isset($map[$code]) ? $map[$code]['tone'] : 'unknown',
     ];
+}
+
+function scheduledStatusCode(?string $firstDeparture, ?string $lastArrival): ?string
+{
+    try {
+        $now = new DateTimeImmutable('now', new DateTimeZone('Europe/Warsaw'));
+        $start = $firstDeparture !== null ? new DateTimeImmutable($firstDeparture) : null;
+        $end = $lastArrival !== null ? new DateTimeImmutable($lastArrival) : null;
+    } catch (Throwable $exception) {
+        return null;
+    }
+
+    if ($start !== null && $now < $start) {
+        return 'S';
+    }
+
+    if ($end !== null && $now > $end) {
+        return 'C';
+    }
+
+    if ($start !== null || $end !== null) {
+        return 'P';
+    }
+
+    return null;
 }
 
 function delayLabel(?int $delay): string
