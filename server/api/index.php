@@ -1570,11 +1570,11 @@ function statusInfo($code, ?string $firstDeparture = null, ?string $lastArrival 
 {
     $code = is_string($code) ? $code : null;
     $map = [
-        'S' => ['label' => 'Nie rozpoczal', 'tone' => 'idle'],
+        'S' => ['label' => 'Nie rozpoczął', 'tone' => 'idle'],
         'P' => ['label' => 'W trasie', 'tone' => 'live'],
-        'C' => ['label' => 'Zakonczony', 'tone' => 'done'],
-        'X' => ['label' => 'Odwolany', 'tone' => 'cancelled'],
-        'Q' => ['label' => 'Czesciowo odwolany', 'tone' => 'warning'],
+        'C' => ['label' => 'Zakończony', 'tone' => 'done'],
+        'X' => ['label' => 'Odwołany', 'tone' => 'cancelled'],
+        'Q' => ['label' => 'Częściowo odwołany', 'tone' => 'warning'],
     ];
 
     if ($code === null || !isset($map[$code])) {

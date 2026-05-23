@@ -113,7 +113,7 @@ return [
     'delay.minutes' => '+{minutes} min',
     'status.S' => 'Nie rozpoczął',
     'status.P' => 'W trasie',
-    'status.C' => 'Zakonczony',
+    'status.C' => 'Zakończony',
     'status.X' => 'Odwołany',
     'status.Q' => 'Częściowo odwołany',
     'status.unknown' => 'Brak statusu',
