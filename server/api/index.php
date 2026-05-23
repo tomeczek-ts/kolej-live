@@ -593,15 +593,18 @@ function trainSuggestions(PdpClient $client, string $query, string $date, int $l
             'lastArrival' => cleanNullable($train['lastArrival'] ?? null),
         ], array_filter($cached, static fn(array $train): bool => !empty($train['scheduleId']) && !empty($train['orderId']))));
 
-        if (trainSuggestionsNeedTimes($matches)) {
-            try {
-                return mergeTrainSuggestionTimes($matches, liveTrainSuggestions($client, $query, $date, $limit));
-            } catch (Throwable $exception) {
-                return $matches;
+        try {
+            $live = liveTrainSuggestions($client, $query, $date, $limit);
+            if ($live !== []) {
+                return $live;
             }
+        } catch (Throwable $exception) {
+            return trainSuggestionsNeedTimes($matches)
+                ? mergeTrainSuggestionTimes($matches, [])
+                : $matches;
         }
 
-        return $matches;
+        return [];
     }
 
     return liveTrainSuggestions($client, $query, $date, $limit);
