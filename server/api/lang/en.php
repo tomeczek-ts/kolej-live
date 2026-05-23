@@ -80,6 +80,7 @@ return [
     'board.empty' => 'No connections for the selected day.',
     'board.loadEarlier' => 'Show earlier ({count})',
     'train.relation' => 'Relation',
+    'train.carrier' => 'Carrier',
     'train.delay' => 'Delay',
     'train.points' => 'Stations',
     'train.stopFallback' => 'stop',

@@ -80,6 +80,7 @@ return [
     'board.empty' => 'Brak połączeń dla wybranego dnia.',
     'board.loadEarlier' => 'Pokaż wcześniejsze ({count})',
     'train.relation' => 'Relacja',
+    'train.carrier' => 'Przewoźnik',
     'train.delay' => 'Opóźnienie',
     'train.points' => 'Stacje',
     'train.stopFallback' => 'postoj',

@@ -40,6 +40,7 @@ export interface TrainSummary {
   number: string | null;
   category: string | null;
   carrierCode: string | null;
+  carrierName: string | null;
   origin: string | null;
   destination: string | null;
   stationCount: number;
@@ -66,6 +67,7 @@ export interface BoardItem {
   number: string | null;
   category: string | null;
   carrierCode: string | null;
+  carrierName: string | null;
   origin: string | null;
   destination: string | null;
   firstDeparture: string | null;

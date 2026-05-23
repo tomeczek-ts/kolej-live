@@ -1086,6 +1086,7 @@ function SearchResults({
                 <TrainFront size={18} />
                 <span>
                   <strong>{train.label}</strong>
+                  <small className="carrier-name">{displayCarrierName(train)}</small>
                   <small className="train-result-route">
                     <span>
                       <b>{t("results.departureShort")}</b>
@@ -1321,7 +1322,7 @@ function BoardRow({
         <DirectionIcon size={16} />
         <span>
           <strong>{item.label}</strong>
-          <small>{item.carrierCode ?? "PLK"}</small>
+          <small>{displayCarrierName(item)}</small>
         </span>
       </span>
       <span className="direction-cell board-route-summary">
@@ -1387,6 +1388,7 @@ function RoutePrompt({
               <TrainFront size={18} />
               <span>
                 <strong>{train.label}</strong>
+                <small className="carrier-name">{displayCarrierName(train)}</small>
                 <small>
                   {train.origin ?? "-"} {"->"} {train.destination ?? "-"}
                 </small>
@@ -1448,6 +1450,7 @@ function TrainListView({
               <TrainFront size={18} />
               <span>
                 <strong>{train.label}</strong>
+                <small className="carrier-name">{displayCarrierName(train)}</small>
                 <small>
                   {train.origin ?? "-"} {"->"} {train.destination ?? "-"}
                 </small>
@@ -1512,6 +1515,7 @@ function TrainDetail({
 
       <div className="train-summary">
         <SummaryMetric label={t("train.relation")} value={`${train.train.origin ?? "-"} -> ${train.train.destination ?? "-"}`} />
+        <SummaryMetric label={t("train.carrier")} value={displayCarrierName(train.train)} />
         <SummaryMetric label={t("train.delay")} value={formatDelay(maxDelay, t)} tone={maxDelay > 0 ? "warn" : "ok"} />
         <SummaryMetric label={t("train.points")} value={`${train.timeline.length}`} />
       </div>
@@ -1650,6 +1654,28 @@ function isTechnicalDisruptionText(value: string): boolean {
 
 function hasTemplatePlaceholder(value: string): boolean {
   return /\{[^{}]+\}/.test(value);
+}
+
+function displayCarrierName(item: { carrierName?: string | null; carrierCode?: string | null }) {
+  return item.carrierName || item.carrierCode || "PKP PLK";
+}
+
+function carrierNamesFrom(items: Array<{ carrierName?: string | null; carrierCode?: string | null }>) {
+  const names: string[] = [];
+  const seen = new Set<string>();
+
+  for (const item of items) {
+    const name = displayCarrierName(item);
+    const key = name.toLocaleLowerCase("pl-PL");
+    if (seen.has(key)) continue;
+
+    seen.add(key);
+    names.push(name);
+
+    if (names.length >= 3) break;
+  }
+
+  return names;
 }
 
 function suggestionSubtitle(item: SearchSuggestion, t: TranslateFn) {
@@ -1813,7 +1839,7 @@ function pageTitle(
   search: SearchResponse | null,
   t: TranslateFn,
 ) {
-  if (train) return `${train.train.label} - kolej.live`;
+  if (train) return `${train.train.label} ${displayCarrierName(train.train)} - kolej.live`;
   if (station) return `${station.station.name} - kolej.live`;
   if (trainList) return `${trainListQuery(trainList.kind, t)} - kolej.live`;
   if (search?.query) return `${search.query} - kolej.live`;
@@ -1833,6 +1859,7 @@ function pageDescription(
 
   if (train) {
     const label = train.train.label;
+    const carrier = displayCarrierName(train.train);
     const relation = train.train.origin && train.train.destination
       ? `${train.train.origin} -> ${train.train.destination}`
       : train.timeline.length > 0
@@ -1846,32 +1873,45 @@ function pageDescription(
         : (english ? `delay up to ${maxDelay} min` : `opóźnienie do ${maxDelay} min`);
 
     if (english) {
-      return `Live delay for train ${label}: ${delayPart}${relation ? `, route ${relation}` : ""}, station times and current status. PKP PLK data.`;
+      return `Live delay for train ${label} operated by ${carrier}: ${delayPart}${relation ? `, route ${relation}` : ""}, station times and current status. PKP PLK data.`;
     }
 
-    return `Opóźnienie pociągu ${label} na żywo: ${delayPart}${relation ? `, relacja ${relation}` : ""}, godziny na stacjach i aktualny status. Dane PKP PLK.`;
+    return `Opóźnienie pociągu ${label} przewoźnika ${carrier} na żywo: ${delayPart}${relation ? `, relacja ${relation}` : ""}, godziny na stacjach i aktualny status. Dane PKP PLK.`;
   }
 
   if (station) {
     const name = station.station.name;
+    const carriers = carrierNamesFrom(station.board);
+    const carrierPart = carriers.length
+      ? (english ? ` Carriers: ${carriers.join(", ")}.` : ` Przewoźnicy: ${carriers.join(", ")}.`)
+      : "";
 
     return english
-      ? `Live train delays at ${name}: departures, arrivals, platforms, tracks and current disruptions. PKP PLK data.`
-      : `Opóźnienia pociągów na stacji ${name} na żywo: odjazdy, przyjazdy, perony, tory i aktualne utrudnienia. Dane PKP PLK.`;
+      ? `Live train delays at ${name}: departures, arrivals, platforms, tracks and current disruptions.${carrierPart} PKP PLK data.`
+      : `Opóźnienia pociągów na stacji ${name} na żywo: odjazdy, przyjazdy, perony, tory i aktualne utrudnienia.${carrierPart} Dane PKP PLK.`;
   }
 
   if (trainList) {
     const label = trainListQuery(trainList.kind, t).toLocaleLowerCase(locale === "pl" ? "pl-PL" : "en-US");
+    const carriers = carrierNamesFrom(trainList.trains);
+    const carrierPart = carriers.length
+      ? (english ? ` Carriers: ${carriers.join(", ")}.` : ` Przewoźnicy: ${carriers.join(", ")}.`)
+      : "";
 
     return english
-      ? `Live list: ${label} today, with routes, planned times and current train statuses from PKP PLK data.`
-      : `Lista ${label} dzisiaj: relacje, godziny planowe i aktualne statusy pociągów z danych PKP PLK.`;
+      ? `Live list: ${label} today, with routes, planned times and current train statuses.${carrierPart} PKP PLK data.`
+      : `Lista ${label} dzisiaj: relacje, godziny planowe i aktualne statusy pociągów.${carrierPart} Dane PKP PLK.`;
   }
 
   if (search?.query) {
+    const carriers = carrierNamesFrom(search.trains);
+    const carrierPart = carriers.length
+      ? (english ? ` Carriers: ${carriers.join(", ")}.` : ` Przewoźnicy: ${carriers.join(", ")}.`)
+      : "";
+
     return english
-      ? `Search results for ${search.query}: live train delays, station boards and current PKP PLK railway data.`
-      : `Wyniki wyszukiwania ${search.query}: opóźnienia pociągów na żywo, tablice stacji i aktualne dane PKP PLK.`;
+      ? `Search results for ${search.query}: live train delays, station boards and current railway data.${carrierPart} PKP PLK data.`
+      : `Wyniki wyszukiwania ${search.query}: opóźnienia pociągów na żywo, tablice stacji i aktualne dane kolejowe.${carrierPart} Dane PKP PLK.`;
   }
 
   return t("meta.description");

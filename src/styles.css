@@ -864,6 +864,11 @@ a {
   font-size: 12px;
 }
 
+.carrier-name {
+  color: var(--ink);
+  font-weight: 760;
+}
+
 .train-list {
   display: grid;
   gap: 8px;
@@ -1122,7 +1127,7 @@ a {
 
 .train-summary {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) 160px 120px;
+  grid-template-columns: minmax(220px, 1.4fr) minmax(150px, 1fr) 150px 120px;
   gap: 10px;
   margin-bottom: 16px;
 }

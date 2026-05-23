@@ -5,6 +5,7 @@ declare(strict_types=1);
 require __DIR__ . '/config.php';
 require __DIR__ . '/PdpClient.php';
 require __DIR__ . '/lib/DataFiles.php';
+require __DIR__ . '/lib/CarrierNames.php';
 require __DIR__ . '/lib/StationCoordinates.php';
 require __DIR__ . '/pdp/stations.php';
 require __DIR__ . '/pdp/schedules.php';
@@ -46,7 +47,7 @@ try {
     }, $stations), $summary);
 
     $carriers = cache_warm_carriers(pdp_carriers($client)['carriers'] ?? []);
-    cache_warm_write('carriers', $carriers, array_map(static fn(array $item): string => $item['code'] . "\t" . $item['name'], $carriers), $summary);
+    cache_warm_write('carriers', $carriers, array_map(static fn(array $item): string => $item['code'] . "\t" . $item['displayName'] . "\t" . $item['name'], $carriers), $summary);
 
     $categories = cache_warm_categories(pdp_commercial_categories($client)['commercialCategories'] ?? []);
     cache_warm_write('commercial-categories', $categories, array_map(static fn(array $item): string => $item['code'] . "\t" . $item['name'] . "\t" . $item['carrierCode'], $categories), $summary);
@@ -141,6 +142,7 @@ function cache_warm_carriers(array $rows): array
             $items[] = [
                 'code' => $code ?? '',
                 'name' => $name ?? $code ?? '',
+                'displayName' => carrier_display_name($code, $name) ?? $name ?? $code ?? '',
                 'validFrom' => cache_warm_clean($row['validFrom'] ?? null),
                 'validTo' => cache_warm_clean($row['validTo'] ?? null),
             ];
@@ -242,6 +244,7 @@ function cache_warm_route_summary(array $route, array $stationDict, string $date
     $destination = $last !== null ? cache_warm_station_name($stationDict, (int) ($last['stationId'] ?? 0)) : null;
     $number = cache_warm_route_number($route);
     $category = cache_warm_clean($route['commercialCategorySymbol'] ?? null);
+    $carrierCode = cache_warm_clean($route['carrierCode'] ?? null);
     $name = cache_warm_clean($route['name'] ?? null);
     $labelParts = array_values(array_filter([$category, $number, $name]));
 
@@ -255,7 +258,8 @@ function cache_warm_route_summary(array $route, array $stationDict, string $date
         'name' => $name,
         'number' => $number,
         'category' => $category,
-        'carrierCode' => cache_warm_clean($route['carrierCode'] ?? null),
+        'carrierCode' => $carrierCode,
+        'carrierName' => carrier_display_name($carrierCode, cache_warm_clean($route['carrierName'] ?? $route['carrier'] ?? null)),
         'origin' => $origin,
         'destination' => $destination,
         'stationCount' => count($stations),

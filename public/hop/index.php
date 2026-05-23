@@ -210,23 +210,40 @@ function hop_page_service_options(array $services): array
 
 function hop_page_carrier_name(?string $carrierCode): string
 {
-    $code = strtoupper(trim((string) $carrierCode));
+    $code = hop_page_carrier_code((string) $carrierCode);
     $names = [
+        'AR' => 'Arriva RP',
+        'ARRIVA' => 'Arriva RP',
         'IC' => 'PKP Intercity',
         'PKPIC' => 'PKP Intercity',
         'KM' => 'Koleje Mazowieckie',
         'KD' => 'Koleje Dolnośląskie',
+        'KML' => 'Koleje Małopolskie',
+        'KMAL' => 'Koleje Małopolskie',
         'KS' => 'Koleje Śląskie',
+        'KSL' => 'Koleje Śląskie',
         'KW' => 'Koleje Wielkopolskie',
-        'ŁKA' => 'Łódzka Kolej Aglomeracyjna',
         'LKA' => 'Łódzka Kolej Aglomeracyjna',
         'POLREGIO' => 'POLREGIO',
         'PR' => 'POLREGIO',
-        'SKM' => 'SKM',
-        'WKD' => 'WKD',
+        'LE' => 'Leo Express',
+        'RJ' => 'RegioJet',
+        'SKPL' => 'SKPL',
+        'SKM' => 'Szybka Kolej Miejska',
+        'SKMWA' => 'Szybka Kolej Miejska w Warszawie',
+        'SKMT' => 'PKP SKM w Trójmieście',
+        'WKD' => 'Warszawska Kolej Dojazdowa',
     ];
 
     return $names[$code] ?? ($code !== '' ? $code : hop_t('hop.common.empty'));
+}
+
+function hop_page_carrier_code(string $value): string
+{
+    $code = strtoupper(trim($value));
+    $ascii = function_exists('iconv') ? iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $code) : $code;
+
+    return preg_replace('/[^A-Z0-9]+/', '', (string) $ascii) ?? '';
 }
 
 function hop_page_service_suggestion_title(array $service): string
@@ -235,6 +252,11 @@ function hop_page_service_suggestion_title(array $service): string
     $carrier = hop_page_carrier_name(isset($service['carrier_code']) ? (string) $service['carrier_code'] : null);
 
     return trim($label . ' · ' . $carrier, " \t\n\r\0\x0B·");
+}
+
+function hop_page_service_meta_label(array $service): string
+{
+    return hop_page_service_suggestion_title($service);
 }
 
 function hop_page_service_suggestion_subtitle(array $service): string
@@ -278,7 +300,7 @@ function hop_page_meta(?array $service, array $summary, string $pageKind = 'home
     $canonical = hop_page_canonical_url($service, $pageKind);
     $image = 'https://hop.kolej.live/kolej-live-logo.svg';
     $siteName = hop_t('hop.meta.site_name');
-    $serviceLabel = $service !== null ? hop_page_service_label($service) : null;
+    $serviceLabel = $service !== null ? hop_page_service_meta_label($service) : null;
 
     if ($pageKind === 'all_trains') {
         $title = hop_t('hop.meta.all_trains_title');
@@ -1215,7 +1237,7 @@ $pageJsonLd = hop_page_json_ld($pageMeta, $selectedService);
         </form>
 
         <div class="metrics">
-          <div class="metric"><span><?= e(hop_t('hop.metrics.train')) ?></span><strong><?= e($selectedService['label'] ?? hop_t('hop.common.empty')) ?></strong></div>
+          <div class="metric"><span><?= e(hop_t('hop.metrics.train')) ?></span><strong><?= e($selectedService !== null ? hop_page_service_suggestion_title($selectedService) : hop_t('hop.common.empty')) ?></strong></div>
           <div class="metric"><span><?= e(hop_t('hop.metrics.days')) ?></span><strong><?= e($summary['days_count'] ?? 0) ?></strong></div>
           <div class="metric"><span><?= e(hop_t('hop.metrics.avg_delay')) ?></span><strong><?= e($summary['avg_delay'] ?? hop_t('hop.common.empty')) ?> <?= e(hop_t('hop.common.minute_unit')) ?></strong></div>
           <div class="metric"><span><?= e(hop_t('hop.metrics.max_delay')) ?></span><strong><?= e($summary['max_delay'] ?? hop_t('hop.common.empty')) ?> <?= e(hop_t('hop.common.minute_unit')) ?></strong></div>

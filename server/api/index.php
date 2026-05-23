@@ -5,6 +5,7 @@ declare(strict_types=1);
 require __DIR__ . '/config.php';
 require __DIR__ . '/PdpClient.php';
 require __DIR__ . '/lib/DataFiles.php';
+require __DIR__ . '/lib/CarrierNames.php';
 require __DIR__ . '/lib/Translations.php';
 require __DIR__ . '/lib/StationCoordinates.php';
 require __DIR__ . '/lib/BusinessSettings.php';
@@ -571,7 +572,7 @@ function haversineDistanceKm(float $latA, float $lonA, float $latB, float $lonB)
 
 function trainSuggestions(PdpClient $client, string $query, string $date, int $limit): array
 {
-    $cached = data_find_items('trains-' . $date . '.json', $query, $limit, ['label', 'name', 'number', 'category', 'carrierCode', 'origin', 'destination']);
+    $cached = data_find_items('trains-' . $date . '.json', $query, $limit, ['label', 'name', 'number', 'category', 'carrierCode', 'carrierName', 'origin', 'destination']);
     if ($cached !== []) {
         $matches = array_values(array_map(static fn(array $train): array => [
             'scheduleId' => (int) ($train['scheduleId'] ?? 0),
@@ -584,6 +585,7 @@ function trainSuggestions(PdpClient $client, string $query, string $date, int $l
             'number' => cleanNullable($train['number'] ?? null),
             'category' => cleanNullable($train['category'] ?? null),
             'carrierCode' => cleanNullable($train['carrierCode'] ?? null),
+            'carrierName' => carrier_display_name(cleanNullable($train['carrierCode'] ?? null), cleanNullable($train['carrierName'] ?? null)),
             'origin' => cleanNullable($train['origin'] ?? null),
             'destination' => cleanNullable($train['destination'] ?? null),
             'stationCount' => (int) ($train['stationCount'] ?? 0),
@@ -830,6 +832,7 @@ function trainSummaryForOperation(array $scheduleMap, array $operation, string $
         'number' => null,
         'category' => null,
         'carrierCode' => null,
+        'carrierName' => null,
         'origin' => null,
         'destination' => null,
         'stationCount' => count($operation['stations'] ?? []),
@@ -864,6 +867,7 @@ function normalizeTrainSummary(array $train, string $date): array
         'number' => cleanNullable($train['number'] ?? null),
         'category' => cleanNullable($train['category'] ?? null),
         'carrierCode' => cleanNullable($train['carrierCode'] ?? null),
+        'carrierName' => carrier_display_name(cleanNullable($train['carrierCode'] ?? null), cleanNullable($train['carrierName'] ?? null)),
         'origin' => cleanNullable($train['origin'] ?? null),
         'destination' => cleanNullable($train['destination'] ?? null),
         'stationCount' => (int) ($train['stationCount'] ?? 0),
@@ -1222,6 +1226,7 @@ function boardItem(string $kind, array $summary, int $stationId, string $planned
         'number' => $summary['number'],
         'category' => $summary['category'],
         'carrierCode' => $summary['carrierCode'],
+        'carrierName' => $summary['carrierName'] ?? carrier_display_name($summary['carrierCode'] ?? null),
         'origin' => $summary['origin'],
         'destination' => $summary['destination'],
         'firstDeparture' => $summary['firstDeparture'] ?? null,
@@ -1420,6 +1425,7 @@ function routeSummary(array $route, array $stationDict, string $date): array
     $destination = $destinationStop ? stationNameFromAnyDictionary($stationDict, (int) ($destinationStop['stationId'] ?? 0)) : null;
     $number = routeNumber($route);
     $category = cleanNullable($route['commercialCategorySymbol'] ?? null);
+    $carrierCode = cleanNullable($route['carrierCode'] ?? null);
     $name = cleanNullable($route['name'] ?? null);
     $labelParts = array_values(array_filter([$category, $number, $name]));
 
@@ -1433,7 +1439,8 @@ function routeSummary(array $route, array $stationDict, string $date): array
         'name' => $name,
         'number' => $number,
         'category' => $category,
-        'carrierCode' => cleanNullable($route['carrierCode'] ?? null),
+        'carrierCode' => $carrierCode,
+        'carrierName' => carrier_display_name($carrierCode, cleanNullable($route['carrierName'] ?? $route['carrier'] ?? null)),
         'origin' => $origin,
         'destination' => $destination,
         'stationCount' => count($stations),
@@ -1448,6 +1455,7 @@ function routeMatchesQuery(array $route, string $query): bool
     $fields = [
         $route['name'] ?? '',
         $route['carrierCode'] ?? '',
+        carrier_display_name(cleanNullable($route['carrierCode'] ?? null)) ?? '',
         $route['nationalNumber'] ?? '',
         $route['internationalArrivalNumber'] ?? '',
         $route['internationalDepartureNumber'] ?? '',
