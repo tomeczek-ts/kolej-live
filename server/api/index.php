@@ -716,19 +716,6 @@ function operationForTrain(PdpClient $client, int $scheduleId, array $orderIds, 
         return null;
     }
 
-    foreach ($wantedOrderIds as $orderId) {
-        try {
-            $operation = pdp_operation_train($client, $scheduleId, $orderId, $date);
-            if (is_array($operation) && (int) ($operation['scheduleId'] ?? $scheduleId) === $scheduleId) {
-                return $operation;
-            }
-        } catch (PdpApiException $exception) {
-            if ($exception->statusCode() !== 404) {
-                throw $exception;
-            }
-        }
-    }
-
     $page = 1;
     $pageSize = 5000;
     $ttlSeconds = function_exists('business_cache_ttl') ? business_cache_ttl('operationsLookup', 45) : 45;
